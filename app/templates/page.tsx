@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { FileText, Download, ShieldAlert, ArrowRight, Search } from 'lucide-react';
 import Link from 'next/link';
+import { useLanguage } from '@/lib/LanguageContext';
+import { getTranslation } from '@/lib/translations';
 
 interface Template {
   id: string;
@@ -15,6 +17,8 @@ interface Template {
 const CATEGORIES = ['All', 'Criminal', 'Civil Rights', 'Civil / Corporate', 'Property', 'General'];
 
 export default function TemplatesPage() {
+  const { lang, isIndic } = useLanguage();
+  const t = getTranslation(lang);
   const [templates, setTemplates] = useState<Template[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -41,11 +45,11 @@ export default function TemplatesPage() {
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
 
         <div className="text-center mb-12">
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-            Legal Document Templates
+          <h1 className={`text-3xl md:text-4xl font-bold text-gray-900 mb-4 ${isIndic ? 'font-hindi' : ''}`}>
+            {t.templates.title}
           </h1>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Download standard legal formats and drafts. Review by a lawyer before official use.
+          <p className={`text-lg text-gray-600 max-w-2xl mx-auto ${isIndic ? 'font-hindi' : ''}`}>
+            {t.templates.subtitle}
           </p>
         </div>
 
@@ -56,7 +60,7 @@ export default function TemplatesPage() {
           <input
             id="template-search"
             type="text"
-            placeholder="Search templates..."
+            placeholder={t.templates.searchPlaceholder}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#1E3A8A]/20 focus:border-[#1E3A8A] outline-none shadow-sm"
@@ -71,8 +75,8 @@ export default function TemplatesPage() {
               onClick={() => setActiveCategory(cat)}
               aria-pressed={activeCategory === cat}
               className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${activeCategory === cat
-                  ? 'bg-[#1E3A8A] text-white'
-                  : 'bg-white text-gray-600 border border-gray-200 hover:border-[#1E3A8A]'
+                ? 'bg-[#1E3A8A] text-white'
+                : 'bg-white text-gray-600 border border-gray-200 hover:border-[#1E3A8A]'
                 }`}
             >
               {cat}
@@ -105,7 +109,7 @@ export default function TemplatesPage() {
           </div>
         ) : templates.length === 0 ? (
           <div className="text-center py-12 bg-white rounded-2xl border border-gray-200">
-            <p className="text-gray-500">No templates found{searchQuery ? ` for "${searchQuery}"` : ''}.</p>
+            <p className={`text-gray-500 ${isIndic ? 'font-hindi' : ''}`}>{t.common.noResults}{searchQuery ? ` "${searchQuery}"` : ''}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">

@@ -51,11 +51,9 @@ export default function Footer() {
         <div className="border-t border-gray-800 pt-8 flex flex-col md:flex-row justify-between items-center text-sm">
           <p className={isIndic ? 'font-hindi' : ''}>&copy; {new Date().getFullYear()} LexIndia. {t.footer.rightsRes}</p>
           <div className="mt-4 md:mt-0 text-xs max-w-xl text-center md:text-right space-y-2">
-            <p className={isIndic ? 'font-hindi' : ''}>
-              {t.footer.disclaimer}
-            </p>
+
             <p className="text-gray-500">
-              <strong>IRDAI Disclaimer:</strong> Insurance is the subject matter of solicitation. For more details on benefits, exclusions, limitations, terms and conditions, please read sales brochure/policy wording carefully before concluding a sale. IRDAI Registration No. XXX-XXXX.
+              <strong>{t.footer.disclaimer}</strong>
             </p>
           </div>
         </div>

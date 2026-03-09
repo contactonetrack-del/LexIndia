@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
+import { getTranslation } from '@/lib/translations';
 import { FAQSkeleton } from '@/components/ui/Skeletons';
 
 interface FAQ {
@@ -28,7 +29,8 @@ const CATEGORY_ICONS: Record<string, React.ElementType> = {
 };
 
 export default function KnowledgeBase() {
-  const { isIndic } = useLanguage();
+  const { lang, isIndic } = useLanguage();
+  const t = getTranslation(lang);
   const [categories, setCategories] = useState<FAQCategory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [openQ, setOpenQ] = useState<string | null>(null);
@@ -57,10 +59,10 @@ export default function KnowledgeBase() {
 
         <div className="text-center mb-12">
           <h1 className={`text-3xl md:text-4xl font-bold text-gray-900 mb-4 ${isIndic ? 'font-hindi' : ''}`}>
-            Know Your Rights & Legal Knowledge
+            {t.knowledge.title}
           </h1>
-          <p className="text-lg text-gray-600 mb-8">
-            Simple, easy-to-understand legal information for Indian citizens.
+          <p className={`text-lg text-gray-600 mb-8 ${isIndic ? 'font-hindi' : ''}`}>
+            {t.knowledge.subtitle}
           </p>
 
           <div className="relative max-w-2xl mx-auto">
@@ -69,7 +71,7 @@ export default function KnowledgeBase() {
             <input
               id="knowledge-search"
               type="text"
-              placeholder="Search for 'FIR', 'Divorce', 'Tenant rights'..."
+              placeholder={t.knowledge.searchPlaceholder}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-12 pr-4 py-4 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#1E3A8A]/20 focus:border-[#1E3A8A] outline-none transition-all shadow-sm text-lg"
@@ -126,8 +128,8 @@ export default function KnowledgeBase() {
           {isLoading ? (
             <FAQSkeleton />
           ) : filtered.length === 0 ? (
-            <div className="text-center py-12 text-gray-500">
-              {searchQuery ? `No results for "${searchQuery}"` : 'No knowledge base entries found.'}
+            <div className={`text-center py-12 text-gray-500 ${isIndic ? 'font-hindi' : ''}`}>
+              {searchQuery ? `${t.common.noResults} "${searchQuery}"` : t.common.noResults}
             </div>
           ) : (
             filtered.map((section) => {

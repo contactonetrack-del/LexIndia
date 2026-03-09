@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { X, User, Scale, Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import { useLanguage } from '@/lib/LanguageContext';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -26,6 +27,7 @@ function GoogleIcon() {
 
 export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
   const router = useRouter();
+  const { t } = useLanguage();
   const [tab, setTab] = useState<TabType>('login');
   const [role, setRole] = useState<'CITIZEN' | 'LAWYER'>('CITIZEN');
   const [name, setName] = useState('');
@@ -108,7 +110,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
         {/* Header */}
         <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gradient-to-r from-[#1E3A8A] to-blue-700">
           <h2 id="auth-modal-title" className="text-xl font-bold text-white">
-            {tab === 'login' ? 'Welcome Back' : 'Create Account'}
+            {tab === 'login' ? t.auth.loginTitle : t.auth.signupTitle}
           </h2>
           <button
             onClick={() => { onClose(); resetForm(); }}
@@ -121,15 +123,15 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
 
         {/* Tabs */}
         <div className="flex border-b border-gray-100" role="tablist">
-          {(['login', 'register'] as TabType[]).map((t) => (
+          {(['login', 'register'] as TabType[]).map((tabName) => (
             <button
-              key={t}
+              key={tabName}
               role="tab"
-              aria-selected={tab === t}
-              onClick={() => { setTab(t); resetForm(); }}
-              className={`flex-1 py-3 text-sm font-semibold capitalize transition-colors ${tab === t ? 'text-[#1E3A8A] border-b-2 border-[#1E3A8A]' : 'text-gray-500 hover:text-gray-700'}`}
+              aria-selected={tab === tabName}
+              onClick={() => { setTab(tabName); resetForm(); }}
+              className={`flex-1 py-3 text-sm font-semibold capitalize transition-colors ${tab === tabName ? 'text-[#1E3A8A] border-b-2 border-[#1E3A8A]' : 'text-gray-500 hover:text-gray-700'}`}
             >
-              {t === 'login' ? 'Sign In' : 'Sign Up'}
+              {tabName === 'login' ? t.auth.loginBtn : t.auth.signupBtn}
             </button>
           ))}
         </div>
@@ -146,7 +148,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                 className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 text-sm font-semibold transition-all ${role === r ? 'border-[#1E3A8A] bg-blue-50 text-[#1E3A8A]' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}
               >
                 {r === 'CITIZEN' ? <User className="w-4 h-4" /> : <Scale className="w-4 h-4" />}
-                {r === 'CITIZEN' ? 'Citizen' : 'Lawyer'}
+                {r === 'CITIZEN' ? t.auth.roleCitizen : t.auth.roleLawyer}
               </button>
             ))}
           </div>
@@ -163,7 +165,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
               {isGoogleLoading
                 ? <Loader2 className="w-4 h-4 animate-spin" />
                 : <GoogleIcon />}
-              Continue with Google
+              {t.auth.continueGoogle}
             </button>
           )}
 
@@ -179,7 +181,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
           <form onSubmit={tab === 'login' ? handleLogin : handleRegister} className="space-y-3">
             {tab === 'register' && (
               <div>
-                <label htmlFor="auth-name" className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                <label htmlFor="auth-name" className="block text-sm font-medium text-gray-700 mb-1">{t.auth.nameLabel}</label>
                 <input
                   id="auth-name"
                   type="text"
@@ -193,7 +195,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
               </div>
             )}
             <div>
-              <label htmlFor="auth-email" className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <label htmlFor="auth-email" className="block text-sm font-medium text-gray-700 mb-1">{t.auth.emailLabel}</label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" aria-hidden="true" />
                 <input
@@ -210,7 +212,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
             </div>
             <div>
               <label htmlFor="auth-password" className="block text-sm font-medium text-gray-700 mb-1">
-                Password {tab === 'register' && <span className="text-gray-400 text-xs">(min 8 chars)</span>}
+                {t.auth.passLabel} {tab === 'register' && <span className="text-gray-400 text-xs">({t.auth.passRequirements})</span>}
               </label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" aria-hidden="true" />
@@ -249,7 +251,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
               className="w-full bg-[#1E3A8A] text-white font-bold py-3 rounded-xl hover:bg-blue-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-2"
             >
               {isLoading && <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />}
-              {tab === 'login' ? 'Sign In' : 'Create Account'}
+              {tab === 'login' ? t.auth.loginBtn : t.auth.signupBtn}
             </button>
           </form>
         </div>

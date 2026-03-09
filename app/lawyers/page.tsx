@@ -145,7 +145,7 @@ function LawyersContent() {
             onClick={() => setIsMobileFilterOpen(!isMobileFilterOpen)}
           >
             <Filter className="w-5 h-5" />
-            Filters {selectedSpec || verifiedOnly ? '(active)' : ''}
+            {t.lawyersPage.filters} {selectedSpec || verifiedOnly ? '(active)' : ''}
           </button>
 
           {/* Sidebar Filters */}
@@ -156,15 +156,15 @@ function LawyersContent() {
           >
             <div className="bg-white rounded-xl border border-gray-200 p-6 sticky top-24">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-lg font-bold text-gray-900">Filters</h2>
-                <button onClick={clearFilters} className="text-sm text-[#1E3A8A] font-medium hover:underline">
-                  Clear All
+                <h2 className="text-lg font-bold text-gray-900">{t.lawyersPage.filters}</h2>
+                <button onClick={clearFilters} className={`text-sm text-[#1E3A8A] font-medium hover:underline ${isIndic ? 'font-hindi' : ''}`}>
+                  {t.lawyersPage.clearFilters}
                 </button>
               </div>
 
               {/* Specialization */}
               <div className="mb-6">
-                <h3 className="font-semibold text-gray-900 mb-3">Specialization</h3>
+                <h3 className={`font-semibold text-gray-900 mb-3 ${isIndic ? 'font-hindi' : ''}`}>Specialization</h3>
                 <div className="space-y-2">
                   {SPECIALIZATIONS.map((spec) => (
                     <label key={spec} className="flex items-center gap-3 cursor-pointer">
@@ -182,7 +182,7 @@ function LawyersContent() {
 
               {/* Verified Only */}
               <div className="mb-6">
-                <h3 className="font-semibold text-gray-900 mb-3">Verification</h3>
+                <h3 className={`font-semibold text-gray-900 mb-3 ${isIndic ? 'font-hindi' : ''}`}>Verification</h3>
                 <label className="flex items-center gap-3 cursor-pointer">
                   <input
                     type="checkbox"
@@ -191,7 +191,7 @@ function LawyersContent() {
                     className="w-4 h-4 rounded border-gray-300 text-[#1E3A8A] focus:ring-[#1E3A8A]"
                   />
                   <span className="text-gray-700 text-sm flex items-center gap-1">
-                    <CheckCircle className="w-4 h-4 text-green-500" /> Verified Only
+                    <CheckCircle className="w-4 h-4 text-green-500" /> {t.lawyersPage.verifiedOnly}
                   </span>
                 </label>
               </div>
@@ -202,7 +202,7 @@ function LawyersContent() {
           <div className="lg:w-3/4 space-y-6">
             <div className="flex justify-between items-center mb-4">
               <p className="text-gray-600 font-medium">
-                {isLoading ? 'Searching...' : `${lawyers.length} Lawyers found`}
+                {isLoading ? t.common.loading : `${lawyers.length} ${t.categories.lawyers}`}
               </p>
               <div className="flex items-center gap-2">
                 <label htmlFor="sort-select" className="sr-only">Sort lawyers by</label>
@@ -224,10 +224,10 @@ function LawyersContent() {
               <LawyersGridSkeleton count={4} />
             ) : lawyers.length === 0 ? (
               <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
-                <h3 className="text-xl font-bold text-gray-900 mb-2">No lawyers found</h3>
-                <p className="text-gray-500">Try adjusting your search or filters to find what you&apos;re looking for.</p>
-                <button onClick={clearFilters} className="mt-4 text-[#1E3A8A] font-medium hover:underline">
-                  Clear all filters
+                <h3 className={`text-xl font-bold text-gray-900 mb-2 ${isIndic ? 'font-hindi' : ''}`}>{t.lawyersPage.noLawyers}</h3>
+                <p className={`text-gray-500 ${isIndic ? 'font-hindi' : ''}`}>Try adjusting your search or filters to find what you&apos;re looking for.</p>
+                <button onClick={clearFilters} className={`mt-4 text-[#1E3A8A] font-medium hover:underline ${isIndic ? 'font-hindi' : ''}`}>
+                  {t.lawyersPage.clearFilters}
                 </button>
               </div>
             ) : (
@@ -252,7 +252,7 @@ function LawyersContent() {
                       </div>
                       <div className="flex items-center gap-4 text-sm text-gray-600 mb-3">
                         <span className="flex items-center gap-1"><MapPin className="w-4 h-4" /> {lawyer.city}</span>
-                        <span className="flex items-center gap-1"><Clock className="w-4 h-4" /> {lawyer.experienceYears} Years</span>
+                        <span className="flex items-center gap-1"><Clock className="w-4 h-4" /> {lawyer.experienceYears} {t.lawyersPage.experience.split(' ')[0] || 'Years'}</span>
                       </div>
                       <div className="flex flex-wrap gap-2 mb-3">
                         {lawyer.specializations.map(spec => (
@@ -262,7 +262,7 @@ function LawyersContent() {
                         ))}
                       </div>
                       <div className="text-sm text-gray-500">
-                        <span className="font-medium text-gray-700">Speaks:</span> {lawyer.languages.map(l => l.name).join(', ')}
+                        <span className={`font-medium text-gray-700 ${isIndic ? 'font-hindi' : ''}`}>{t.lawyersPage.languages || 'Speaks'}:</span> {lawyer.languages.map(l => l.name).join(', ')}
                       </div>
                     </div>
                   </div>
@@ -287,7 +287,7 @@ function LawyersContent() {
                         href={`/book/${lawyer.id}`}
                         className="block w-full text-center bg-[#1E3A8A] text-white font-semibold py-2.5 rounded-lg hover:bg-blue-800 transition-colors"
                       >
-                        Book Slot
+                        {t.lawyersPage.bookConsultation}
                       </Link>
                     </div>
                   </div>
