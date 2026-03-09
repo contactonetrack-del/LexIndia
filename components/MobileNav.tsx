@@ -47,7 +47,7 @@ export default function MobileNav() {
           </Link>
         ) : (
           <button
-            onClick={openAuthModal}
+            onClick={() => openAuthModal()}
             className="flex flex-col items-center justify-center w-full h-full space-y-1 text-gray-500 hover:text-gray-900"
           >
             <User className="w-5 h-5" />

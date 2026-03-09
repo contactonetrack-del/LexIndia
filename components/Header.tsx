@@ -119,13 +119,13 @@ export default function Header() {
           {!userRole ? (
             <>
               <button
-                onClick={openAuthModal}
+                onClick={() => openAuthModal()}
                 className={`hidden sm:block text-[#1E3A8A] font-medium hover:text-blue-700 transition-colors ${isIndic ? 'font-hindi' : ''}`}
               >
                 {t.nav.login}
               </button>
               <button
-                onClick={openAuthModal}
+                onClick={() => openAuthModal()}
                 className={`hidden sm:block bg-[#1E3A8A] text-white px-4 sm:px-5 py-2 rounded-lg font-medium hover:bg-blue-800 transition-colors shadow-sm text-sm sm:text-base ${isIndic ? 'font-hindi' : ''}`}
               >
                 {t.nav.signup}

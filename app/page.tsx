@@ -7,11 +7,13 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { getTranslation } from '@/lib/translations';
 import { useLanguage } from '@/lib/LanguageContext';
+import { useAuth } from '@/lib/AuthContext';
 
 export default function HomePage() {
   const { lang, isIndic } = useLanguage();
   const t = getTranslation(lang);
   const router = useRouter();
+  const { openAuthModal } = useAuth();
 
   const [searchLaw, setSearchLaw] = useState('');
   const [searchCity, setSearchCity] = useState('');
@@ -35,28 +37,28 @@ export default function HomePage() {
           <p className={`text-xl md:text-2xl text-blue-200 mb-10 ${lang === 'en' ? 'font-hindi' : ''}`}>
             {t.hero.subtitle}
           </p>
-          
+
           {/* Search Bar */}
           <div className="max-w-3xl mx-auto bg-white rounded-xl p-2 shadow-lg flex flex-col sm:flex-row gap-2 mb-10">
             <div className="flex-1 flex items-center px-4 bg-gray-50 rounded-lg border border-gray-200 focus-within:border-[#D4AF37] focus-within:ring-1 focus-within:ring-[#D4AF37] transition-all">
               <Search className="w-5 h-5 text-gray-400" />
-              <input 
-                type="text" 
+              <input
+                type="text"
                 value={searchLaw}
                 onChange={(e) => setSearchLaw(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                placeholder={t.hero.searchLaw} 
+                placeholder={t.hero.searchLaw}
                 className={`w-full bg-transparent border-none focus:ring-0 text-gray-900 placeholder-gray-500 py-3 px-3 outline-none ${isIndic ? 'font-hindi' : ''}`}
               />
             </div>
             <div className="flex-1 flex items-center px-4 bg-gray-50 rounded-lg border border-gray-200 focus-within:border-[#D4AF37] focus-within:ring-1 focus-within:ring-[#D4AF37] transition-all">
               <MapPin className="w-5 h-5 text-gray-400" />
-              <input 
-                type="text" 
+              <input
+                type="text"
                 value={searchCity}
                 onChange={(e) => setSearchCity(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                placeholder={t.hero.searchCity} 
+                placeholder={t.hero.searchCity}
                 className={`w-full bg-transparent border-none focus:ring-0 text-gray-900 placeholder-gray-500 py-3 px-3 outline-none ${isIndic ? 'font-hindi' : ''}`}
               />
             </div>
@@ -65,12 +67,17 @@ export default function HomePage() {
             </button>
           </div>
 
-          {/* CTAs */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <button className={`w-full sm:w-auto bg-white text-[#1E3A8A] px-8 py-3 rounded-lg font-semibold hover:bg-gray-50 transition-colors shadow-md ${isIndic ? 'font-hindi' : ''}`}>
+            <button
+              onClick={() => openAuthModal({ initialTab: 'register', initialRole: 'CITIZEN' })}
+              className={`w-full sm:w-auto bg-white text-[#1E3A8A] px-8 py-3 rounded-lg font-semibold hover:bg-gray-50 transition-colors shadow-md ${isIndic ? 'font-hindi' : ''}`}
+            >
               {t.hero.forCitizens}
             </button>
-            <button className={`w-full sm:w-auto bg-transparent border-2 border-white text-white px-8 py-3 rounded-lg font-semibold hover:bg-white/10 transition-colors ${isIndic ? 'font-hindi' : ''}`}>
+            <button
+              onClick={() => openAuthModal({ initialTab: 'register', initialRole: 'LAWYER' })}
+              className={`w-full sm:w-auto bg-transparent border-2 border-white text-white px-8 py-3 rounded-lg font-semibold hover:bg-white/10 transition-colors ${isIndic ? 'font-hindi' : ''}`}
+            >
               {t.hero.forLawyers}
             </button>
           </div>
@@ -84,7 +91,7 @@ export default function HomePage() {
             <h2 className={`text-3xl font-bold text-gray-900 mb-4 ${isIndic ? 'font-hindi' : ''}`}>{t.features.title}</h2>
             <p className={`text-lg text-gray-600 max-w-2xl mx-auto ${isIndic ? 'font-hindi' : ''}`}>{t.features.subtitle}</p>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {[
               { icon: Search, title: t.features.f1Title, desc: t.features.f1Desc },
@@ -114,7 +121,7 @@ export default function HomePage() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12 relative">
             <div className="hidden md:block absolute top-12 left-[15%] right-[15%] h-0.5 bg-gray-200 z-0"></div>
-            
+
             {[
               { step: '1', title: t.howItWorks.s1Title, desc: t.howItWorks.s1Desc },
               { step: '2', title: t.howItWorks.s2Title, desc: t.howItWorks.s2Desc },
@@ -166,7 +173,7 @@ export default function HomePage() {
             ))}
           </div>
           <div className="mt-8 text-center sm:hidden">
-             <Link href="/lawyers" className="inline-flex items-center text-[#1E3A8A] font-medium hover:text-blue-700 transition-colors">
+            <Link href="/lawyers" className="inline-flex items-center text-[#1E3A8A] font-medium hover:text-blue-700 transition-colors">
               <span className={isIndic ? 'font-hindi' : ''}>{t.categories.viewAll}</span> <ChevronRight className="w-4 h-4 ml-1" />
             </Link>
           </div>
@@ -177,7 +184,7 @@ export default function HomePage() {
       <section className="py-24 bg-[#1E3A8A] text-white relative overflow-hidden">
         <div className="absolute top-0 right-0 -mt-20 -mr-20 w-80 h-80 bg-blue-800 rounded-full opacity-50 blur-3xl"></div>
         <div className="absolute bottom-0 left-0 -mb-20 -ml-20 w-80 h-80 bg-blue-900 rounded-full opacity-50 blur-3xl"></div>
-        
+
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
             <div>
@@ -185,11 +192,14 @@ export default function HomePage() {
               <p className={`text-xl text-blue-200 mb-10 max-w-lg ${isIndic ? 'font-hindi' : ''}`}>
                 {t.testimonials.subtitle}
               </p>
-              <Link href="/lawyers" className={`inline-block bg-[#D4AF37] text-gray-900 font-bold px-8 py-4 rounded-lg hover:bg-yellow-500 transition-colors shadow-lg text-lg ${isIndic ? 'font-hindi' : ''}`}>
+              <button
+                onClick={() => openAuthModal({ initialTab: 'register', initialRole: 'CITIZEN' })}
+                className={`inline-block bg-[#D4AF37] text-gray-900 font-bold px-8 py-4 rounded-lg hover:bg-yellow-500 transition-colors shadow-lg text-lg ${isIndic ? 'font-hindi' : ''}`}
+              >
                 {t.testimonials.startBtn}
-              </Link>
+              </button>
             </div>
-            
+
             {/* Testimonial Card */}
             <div className="bg-white/10 backdrop-blur-lg border border-white/20 p-8 rounded-2xl">
               <div className="flex gap-1 text-[#D4AF37] mb-6">
@@ -200,7 +210,7 @@ export default function HomePage() {
               </p>
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 bg-gray-300 rounded-full overflow-hidden relative">
-                   <Image src="https://picsum.photos/seed/user1/100/100" alt="User" fill className="object-cover" referrerPolicy="no-referrer" />
+                  <Image src="https://picsum.photos/seed/user1/100/100" alt="User" fill className="object-cover" referrerPolicy="no-referrer" />
                 </div>
                 <div>
                   <h4 className="font-semibold">Rajesh Kumar</h4>

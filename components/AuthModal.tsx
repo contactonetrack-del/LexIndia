@@ -5,6 +5,7 @@ import { X, User, Scale, Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/lib/LanguageContext';
+import { useAuth } from '@/lib/AuthContext';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -28,6 +29,8 @@ function GoogleIcon() {
 export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
   const router = useRouter();
   const { t } = useLanguage();
+  const { authOptions } = useAuth();
+
   const [tab, setTab] = useState<TabType>('login');
   const [role, setRole] = useState<'CITIZEN' | 'LAWYER'>('CITIZEN');
   const [name, setName] = useState('');
@@ -38,11 +41,20 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [error, setError] = useState('');
 
-  if (!isOpen) return null;
-
   const resetForm = () => {
     setName(''); setEmail(''); setPassword(''); setError('');
   };
+
+  // Update internal state when modal opens
+  React.useEffect(() => {
+    if (isOpen) {
+      setTab(authOptions.initialTab || 'login');
+      setRole(authOptions.initialRole || 'CITIZEN');
+      resetForm();
+    }
+  }, [isOpen, authOptions]);
+
+  if (!isOpen) return null;
 
   const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true);
