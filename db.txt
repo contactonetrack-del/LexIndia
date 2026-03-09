@@ -1,0 +1,1 @@
+postgresql://postgres:Freeai%402026@db.ktaoimzaufjrnsmdpzlf.supabase.co:5432/postgres
