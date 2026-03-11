@@ -1,1 +1,34 @@
 @import "tailwindcss";
+
+@theme {
+  --color-foreground: oklch(0.145 0 0);
+  --color-background: oklch(1 0 0);
+}
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+  }
+}
+
+@layer base {
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+  }
+}
+
+@layer utilities {
+  /* Global focus indicator for keyboard navigation */
+  *:focus-visible {
+    outline: 2px solid #D4AF37;
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+}

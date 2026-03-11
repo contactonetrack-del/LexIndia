@@ -40,9 +40,13 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [error, setError] = useState('');
+  const [consentChecked, setConsentChecked] = useState(false);
+  const [consentTimestamp, setConsentTimestamp] = useState<string | null>(null);
+
 
   const resetForm = () => {
     setName(''); setEmail(''); setPassword(''); setError('');
+    setConsentChecked(false); setConsentTimestamp(null);
   };
 
   // Update internal state when modal opens
@@ -57,6 +61,10 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
   if (!isOpen) return null;
 
   const handleGoogleSignIn = async () => {
+    if (tab === 'register' && !consentChecked) {
+      setError('You must agree to the Terms of Service and Privacy Policy to register.');
+      return;
+    }
     setIsGoogleLoading(true);
     setError('');
     try {
@@ -85,12 +93,15 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     if (password.length < 8) { setError('Password must be at least 8 characters'); return; }
+    if (!consentChecked) { setError('You must agree to the Terms of Service and Privacy Policy to register.'); return; }
     setIsLoading(true); setError('');
+    const ts = new Date().toISOString();
+    setConsentTimestamp(ts);
     try {
       const res = await fetch('/api/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password, role }),
+        body: JSON.stringify({ name, email, password, role, consentTimestamp: ts, consentVersion: '1.0' }),
       });
       const data = await res.json();
       if (res.status === 429) {
@@ -164,6 +175,30 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
               </button>
             ))}
           </div>
+
+          {/* Consent Checkbox — register only (Applies to both Google and Email) */}
+          {tab === 'register' && (
+            <div className="flex items-start gap-3 py-1">
+              <input
+                id="auth-consent-global"
+                type="checkbox"
+                checked={consentChecked}
+                onChange={(e) => setConsentChecked(e.target.checked)}
+                className="mt-0.5 w-4 h-4 rounded border-gray-300 text-[#1E3A8A] focus:ring-[#1E3A8A] cursor-pointer"
+                required
+              />
+              <label htmlFor="auth-consent-global" className="text-xs text-gray-600 leading-relaxed cursor-pointer">
+                I agree to LexIndia&apos;s{' '}
+                <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-[#1E3A8A] underline font-medium">
+                  Terms of Service
+                </a>{' '}
+                and{' '}
+                <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-[#1E3A8A] underline font-medium">
+                  Privacy Policy
+                </a>.
+              </label>
+            </div>
+          )}
 
           {/* Google Sign-In */}
           {isGoogleAvailable && (
@@ -249,6 +284,20 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
+              {tab === 'login' && (
+                <div className="flex justify-end mt-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onClose();
+                      router.push('/forgot-password');
+                    }}
+                    className="text-sm font-medium text-[#1E3A8A] hover:underline"
+                  >
+                    Forgot your password?
+                  </button>
+                </div>
+              )}
             </div>
 
             {error && (
@@ -257,9 +306,11 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
               </p>
             )}
 
+
+
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isLoading || (tab === 'register' && !consentChecked)}
               className="w-full bg-[#1E3A8A] text-white font-bold py-3 rounded-xl hover:bg-blue-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-2"
             >
               {isLoading && <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />}

@@ -25,26 +25,29 @@ export default function Footer() {
             <h4 className={`text-white font-semibold mb-4 ${isIndic ? 'font-hindi' : ''}`}>{t.footer.forCitizens}</h4>
             <ul className={`space-y-2 text-sm ${isIndic ? 'font-hindi' : ''}`}>
               <li><Link href="/lawyers" className="hover:text-white transition-colors">{t.footer.findLawyer}</Link></li>
-              <li><Link href="#" className="hover:text-white transition-colors">{t.footer.knowledge}</Link></li>
-              <li><Link href="#" className="hover:text-white transition-colors">{t.footer.templates}</Link></li>
-              <li><Link href="#" className="hover:text-white transition-colors">{t.footer.rights}</Link></li>
+              <li><Link href="/knowledge" className="hover:text-white transition-colors">{t.footer.knowledge}</Link></li>
+              <li><Link href="/guides" className="hover:text-white transition-colors">Legal Guides</Link></li>
+              <li><Link href="/templates" className="hover:text-white transition-colors">{t.footer.templates}</Link></li>
+              <li><Link href="/rights" className="hover:text-white transition-colors">{t.footer.rights}</Link></li>
             </ul>
           </div>
           <div>
             <h4 className={`text-white font-semibold mb-4 ${isIndic ? 'font-hindi' : ''}`}>{t.footer.forLawyers}</h4>
             <ul className={`space-y-2 text-sm ${isIndic ? 'font-hindi' : ''}`}>
-              <li><Link href="#" className="hover:text-white transition-colors">{t.footer.joinDir}</Link></li>
-              <li><Link href="#" className="hover:text-white transition-colors">{t.footer.dashboard}</Link></li>
-              <li><Link href="#" className="hover:text-white transition-colors">{t.footer.pricing}</Link></li>
+              <li><Link href="/for-lawyers" className="hover:text-white transition-colors">{t.footer.joinDir}</Link></li>
+              <li><Link href="/dashboard/lawyer" className="hover:text-white transition-colors">{t.footer.dashboard}</Link></li>
+              <li><Link href="/pricing" className="hover:text-white transition-colors">{t.footer.pricing}</Link></li>
             </ul>
           </div>
           <div>
             <h4 className={`text-white font-semibold mb-4 ${isIndic ? 'font-hindi' : ''}`}>{t.footer.company}</h4>
             <ul className={`space-y-2 text-sm ${isIndic ? 'font-hindi' : ''}`}>
-              <li><Link href="#" className="hover:text-white transition-colors">{t.footer.about}</Link></li>
-              <li><Link href="#" className="hover:text-white transition-colors">{t.footer.contact}</Link></li>
-              <li><Link href="#" className="hover:text-white transition-colors">{t.footer.privacy}</Link></li>
-              <li><Link href="#" className="hover:text-white transition-colors">{t.footer.terms}</Link></li>
+              <li><Link href="/about" className="hover:text-white transition-colors">{t.footer.about}</Link></li>
+              <li><Link href="/contact" className="hover:text-white transition-colors">{t.footer.contact}</Link></li>
+              <li><Link href="/verify-lawyers" className="hover:text-white transition-colors">Verification Policy</Link></li>
+              <li><Link href="/privacy" className="hover:text-white transition-colors">{t.footer.privacy}</Link></li>
+              <li><Link href="/terms" className="hover:text-white transition-colors">{t.footer.terms}</Link></li>
+              <li><Link href="/disclaimer" className="hover:text-white transition-colors">Disclaimer</Link></li>
             </ul>
           </div>
         </div>

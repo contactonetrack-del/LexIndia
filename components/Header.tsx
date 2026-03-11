@@ -8,6 +8,7 @@ import { useLanguage } from '@/lib/LanguageContext';
 import { useAuth } from '@/lib/AuthContext';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 export default function Header() {
   const { lang, setLang, isIndic } = useLanguage();
@@ -49,25 +50,29 @@ export default function Header() {
   );
 
   return (
-    <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
+    <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 sticky top-0 z-50 transition-colors">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
         <Link href="/" className="flex items-center gap-2 shrink-0">
           <Scale className="w-8 h-8 text-[#1E3A8A]" />
           <span className="text-2xl font-bold text-[#1E3A8A] tracking-tight">LexIndia</span>
         </Link>
         <nav className="hidden lg:flex items-center gap-6 xl:gap-8">
-          <Link href="/lawyers" className={`text-gray-600 hover:text-[#1E3A8A] font-medium transition-colors whitespace-nowrap ${isIndic ? 'font-hindi' : ''}`}>{t.nav.lawyers}</Link>
-          <Link href="/knowledge" className={`text-gray-600 hover:text-[#1E3A8A] font-medium transition-colors whitespace-nowrap ${isIndic ? 'font-hindi' : ''}`}>{t.nav.knowledge}</Link>
-          <Link href="/templates" className={`text-gray-600 hover:text-[#1E3A8A] font-medium transition-colors whitespace-nowrap ${isIndic ? 'font-hindi' : ''}`}>{t.nav.templates}</Link>
-          <Link href="/knowledge" className={`text-gray-600 hover:text-[#1E3A8A] font-medium transition-colors whitespace-nowrap ${isIndic ? 'font-hindi' : ''}`}>{t.nav.rights}</Link>
+          <Link href="/lawyers" className={`text-gray-600 dark:text-gray-300 hover:text-[#1E3A8A] dark:hover:text-blue-400 font-medium transition-colors whitespace-nowrap ${isIndic ? 'font-hindi' : ''}`}>{t.nav.lawyers}</Link>
+          <Link href="/knowledge" className={`text-gray-600 dark:text-gray-300 hover:text-[#1E3A8A] dark:hover:text-blue-400 font-medium transition-colors whitespace-nowrap ${isIndic ? 'font-hindi' : ''}`}>{t.nav.knowledge}</Link>
+          <Link href="/guides" className={`text-gray-600 dark:text-gray-300 hover:text-[#1E3A8A] dark:hover:text-blue-400 font-medium transition-colors whitespace-nowrap ${isIndic ? 'font-hindi' : ''}`}>Legal Guides</Link>
+          <Link href="/templates" className={`text-gray-600 dark:text-gray-300 hover:text-[#1E3A8A] dark:hover:text-blue-400 font-medium transition-colors whitespace-nowrap ${isIndic ? 'font-hindi' : ''}`}>{t.nav.templates}</Link>
+          <Link href="/rights" className={`text-gray-600 dark:text-gray-300 hover:text-[#1E3A8A] dark:hover:text-blue-400 font-medium transition-colors whitespace-nowrap ${isIndic ? 'font-hindi' : ''}`}>{t.nav.rights}</Link>
+          <Link href="/pricing" className={`text-[#D4AF37] hover:text-[#B8962D] dark:text-[#E5C158] dark:hover:text-[#F3D573] font-bold transition-colors whitespace-nowrap ${isIndic ? 'font-hindi' : ''}`}>For Lawyers</Link>
         </nav>
-        <div className="flex items-center gap-3 sm:gap-4 shrink-0">
+        <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+          
+          <ThemeToggle />
 
           {/* Language Dropdown */}
           <div className="relative" ref={langMenuRef}>
             <button
               onClick={() => setIsLangMenuOpen(!isLangMenuOpen)}
-              className="flex items-center gap-1.5 text-gray-600 hover:text-[#1E3A8A] font-medium transition-colors px-3 py-2 rounded-lg hover:bg-gray-100 border border-transparent hover:border-gray-200"
+              className="flex items-center gap-1.5 text-gray-600 dark:text-gray-300 hover:text-[#1E3A8A] dark:hover:text-blue-400 font-medium transition-colors px-2 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 border border-transparent hover:border-gray-200 dark:hover:border-gray-700"
               aria-label="Select Language"
               aria-expanded={isLangMenuOpen}
               aria-haspopup="listbox"
@@ -78,8 +83,8 @@ export default function Header() {
             </button>
 
             {isLangMenuOpen && (
-              <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden z-50 flex flex-col transform origin-top-right transition-all">
-                <div className="p-3 border-b border-gray-100 bg-gray-50/50">
+              <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-900 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden z-50 flex flex-col transform origin-top-right transition-all">
+                <div className="p-3 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/50">
                   <div className="relative">
                     <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                     <input
@@ -187,11 +192,25 @@ export default function Header() {
               {t.nav.templates}
             </Link>
             <Link
-              href="/knowledge"
+              href="/guides"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className={`text-gray-600 hover:text-[#1E3A8A] font-medium transition-colors ${isIndic ? 'font-hindi' : ''}`}
+            >
+              Legal Guides
+            </Link>
+            <Link
+              href="/rights"
               onClick={() => setIsMobileMenuOpen(false)}
               className={`text-gray-600 hover:text-[#1E3A8A] font-medium transition-colors ${isIndic ? 'font-hindi' : ''}`}
             >
               {t.nav.rights}
+            </Link>
+            <Link
+              href="/pricing"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className={`text-[#D4AF37] hover:text-[#B8962D] font-bold transition-colors ${isIndic ? 'font-hindi' : ''}`}
+            >
+              For Lawyers
             </Link>
 
             {!userRole ? (

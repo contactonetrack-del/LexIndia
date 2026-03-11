@@ -65,7 +65,7 @@ export default function InsuranceHub() {
               <Shield className="w-8 h-8 text-[#1E3A8A]" />
             </div>
             <h3 className="font-bold text-gray-900 mb-2">Unbiased Comparison</h3>
-            <p className="text-gray-600 text-sm">We don't favor any provider. Compare policies objectively based on your needs.</p>
+            <p className="text-gray-600 text-sm">We don&apos;t favor any provider. Compare policies objectively based on your needs.</p>
           </div>
           <div>
             <div className="w-16 h-16 mx-auto bg-blue-50 rounded-full flex items-center justify-center mb-4">

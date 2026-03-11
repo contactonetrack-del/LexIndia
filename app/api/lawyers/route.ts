@@ -67,10 +67,32 @@ export async function GET(req: NextRequest) {
                 specializations: true,
                 modes: true,
             },
+            // Initial sorting by rating to ensure secondary fallback is optimized
             orderBy: { rating: "desc" },
         });
 
-        return NextResponse.json({ lawyers, total: lawyers.length });
+        // Artificially float Elite and Pro subscribers to the top
+        const tierWeights: Record<string, number> = {
+            'ELITE': 3,
+            'PRO': 2,
+            'BASIC': 1
+        };
+
+        const sortedLawyers = lawyers.sort((a, b) => {
+            const tierA = (a as any).subscriptionTier || 'BASIC';
+            const tierB = (b as any).subscriptionTier || 'BASIC';
+            const weightA = tierWeights[tierA] || 1;
+            const weightB = tierWeights[tierB] || 1;
+            
+            if (weightA !== weightB) {
+                return weightB - weightA; // Higher weight comes first
+            }
+            
+            // Tie-breaker: rating
+            return b.rating - a.rating;
+        });
+
+        return NextResponse.json({ lawyers: sortedLawyers, total: sortedLawyers.length });
     } catch (error) {
         console.error("Lawyers API error:", error);
         return NextResponse.json(

@@ -9,6 +9,8 @@ import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
 import { getTranslation } from '@/lib/translations';
 import { FAQSkeleton } from '@/components/ui/Skeletons';
+import { LeadCapture } from '@/components/ui/LeadCapture';
+import { ConsultationCTA } from '@/components/ui/ConsultationCTA';
 
 interface FAQ {
   id: string;
@@ -102,6 +104,12 @@ export default function KnowledgeBase() {
           </a>
         </div>
 
+        <ConsultationCTA 
+          title="Have a specific question not covered here?"
+          description="A short 15 minute call with a top-rated attorney can clear up any confusion and build your confidence."
+          buttonText="Talk to a Lawyer"
+        />
+
         {/* Official Resources */}
         <div className="mb-12">
           <h2 className="text-2xl font-bold text-gray-900 mb-6">Official Government Resources</h2>
@@ -168,6 +176,11 @@ export default function KnowledgeBase() {
               );
             })
           )}
+        </div>
+
+        {/* Lead Capture */}
+        <div className="mt-16 mb-8">
+          <LeadCapture />
         </div>
 
         <div className="mt-12 text-center">

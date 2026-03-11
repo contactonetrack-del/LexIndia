@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import prisma from "@/lib/prisma";
 import { rateLimit, getClientIp } from "@/lib/rateLimit";
+import { generateVerificationToken } from "@/lib/tokens";
+import { sendVerificationEmail } from "@/lib/mail";
 
 // 5 registrations per IP per 15 minutes
 const REGISTER_LIMIT = { limit: 5, windowSecs: 15 * 60 };
@@ -35,7 +37,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
     }
 
-    const { name, email, password, role } = body;
+    const { name, email, password, role, consentTimestamp, consentVersion } = body;
 
     if (!name?.trim() || !email?.trim() || !password) {
         return NextResponse.json(
@@ -74,8 +76,20 @@ export async function POST(req: NextRequest) {
             email: email.toLowerCase().trim(),
             password: hashedPassword,
             role: role === "LAWYER" ? "LAWYER" : "CITIZEN",
+            consentTimestamp: consentTimestamp ? new Date(consentTimestamp) : new Date(),
+            consentVersion: consentVersion || "1.0",
         },
     });
+
+    try {
+        const verificationToken = await generateVerificationToken(user.email!);
+        if (verificationToken) {
+            await sendVerificationEmail(user.email!, verificationToken.token);
+        }
+    } catch (error) {
+        console.error("Failed to send verification email:", error);
+        // We still return 201 as the user was successfully created
+    }
 
     return NextResponse.json(
         { message: "Account created successfully", userId: user.id },

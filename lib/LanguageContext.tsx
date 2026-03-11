@@ -19,6 +19,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const savedLang = localStorage.getItem('lexindia_lang') as Language;
     if (savedLang) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLang(savedLang);
     }
   }, []);
