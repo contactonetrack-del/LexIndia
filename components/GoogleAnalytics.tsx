@@ -1,0 +1,33 @@
+import Script from 'next/script';
+
+const GA_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
+
+/**
+ * GoogleAnalytics — loads gtag.js for GA4.
+ * Only renders when NEXT_PUBLIC_GA_MEASUREMENT_ID is set.
+ * Uses next/script "afterInteractive" strategy so it never blocks
+ * the main thread or LCP.
+ */
+export default function GoogleAnalytics() {
+  if (!GA_ID) return null;
+
+  return (
+    <>
+      <Script
+        src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
+        strategy="afterInteractive"
+      />
+      <Script id="google-analytics" strategy="afterInteractive">
+        {`
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+          gtag('config', '${GA_ID}', {
+            page_path: window.location.pathname,
+            cookie_flags: 'SameSite=None;Secure',
+          });
+        `}
+      </Script>
+    </>
+  );
+}
