@@ -4,13 +4,12 @@ import { authOptions } from "@/lib/auth";
 import Razorpay from "razorpay";
 import prisma from "@/lib/prisma";
 
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID!,
-  key_secret: process.env.RAZORPAY_KEY_SECRET!,
-});
-
 export async function POST(req: NextRequest) {
   try {
+    const razorpay = new Razorpay({
+      key_id: process.env.RAZORPAY_KEY_ID!,
+      key_secret: process.env.RAZORPAY_KEY_SECRET!,
+    });
     const session = await getServerSession(authOptions);
     if (!session || session.user.role !== "LAWYER") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
