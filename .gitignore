@@ -3,6 +3,12 @@ node_modules/
 coverage/
 .DS_Store
 *.log
+*.tsbuildinfo
+eslint-output.json
+eslint.txt
+build.out
+test-results/
+untracked_files.txt
 .env*
 !.env.example
 
