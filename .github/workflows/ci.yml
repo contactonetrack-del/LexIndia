@@ -8,7 +8,7 @@ on:
 
 jobs:
   build_and_test:
-    name: Build, Lint & Lighthouse
+    name: Build, Compliance & Lighthouse
     runs-on: ubuntu-latest
     
     steps:
@@ -28,10 +28,13 @@ jobs:
         run: npx prisma generate
 
       - name: Type Check
-        run: npx tsc --noEmit
+        run: npm run typecheck
 
       - name: ESLint Check
         run: npm run lint
+
+      - name: Theme and i18n Compliance
+        run: npm run compliance
 
       - name: Build Next.js Application
         run: npm run build
@@ -40,15 +43,24 @@ jobs:
           # Include placeholder ENV VARS from local if they fail build without them, 
           # but we recommend keeping build-time secrets in Github Secrets!
 
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Browser Compliance Tests
+        run: npm run test:browser
+
+      - name: Generate Compliance Audit
+        run: npm run audit:compliance
+
       - name: Run Lighthouse CI Action
         uses: treosh/lighthouse-ci-action@v12
         with:
           urls: |
-            http://localhost:3000/
-            http://localhost:3000/lawyers
-            http://localhost:3000/guides
+            http://localhost:3000/en
+            http://localhost:3000/en/lawyers
+            http://localhost:3000/en/guides
           buildScript: npm run build
-          serverScript: npm run start
+          serverScript: node scripts/start-standalone.js
           uploadArtifacts: true
           temporaryPublicStorage: true
           # Enforce passing metrics matching task 5.4.2 criteria

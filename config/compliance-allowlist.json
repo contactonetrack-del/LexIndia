@@ -1,0 +1,31 @@
+{
+  "i18n": {
+    "literalIgnore": [
+      "LexIndia",
+      "ELITE",
+      "PRO",
+      "TXT",
+      "Google",
+      "Razorpay",
+      "eCourts Services",
+      "Tele-Law"
+    ],
+    "sameAsEnglish": [
+      "hero.titleB",
+      "hero.subtitleB",
+      "auth.continueGoogle"
+    ],
+    "routeFallbackAllowlist": []
+  },
+  "theme": {
+    "ignoreFiles": [
+      "app/globals.css"
+    ],
+    "ignorePatterns": [
+      "#4285F4",
+      "#34A853",
+      "#FBBC05",
+      "#EA4335"
+    ]
+  }
+}

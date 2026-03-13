@@ -96,6 +96,7 @@ model LawyerProfile {
 
   languages         Language[]
   specializations   Specialization[]
+  translations      LawyerProfileTranslation[]
   modes             LawyerConsultationMode[]
   appointments      Appointment[] @relation("LawyerAppointments")
   reviews           Review[]      @relation("LawyerReviews")
@@ -105,16 +106,18 @@ model LawyerProfile {
 }
 
 model Language {
-  id      String          @id @default(cuid())
-  name    String          @unique
-  lawyers LawyerProfile[]
+  id           String                @id @default(cuid())
+  name         String                @unique
+  lawyers      LawyerProfile[]
+  translations LanguageTranslation[]
 }
 
 model Specialization {
-  id          String          @id @default(cuid())
-  name        String          @unique
-  description String?
-  lawyers     LawyerProfile[]
+  id           String                       @id @default(cuid())
+  name         String                       @unique
+  description  String?
+  lawyers      LawyerProfile[]
+  translations SpecializationTranslation[]
 }
 
 model LawyerConsultationMode {
@@ -202,29 +205,104 @@ model CaseNote {
 }
 
 model FAQCategory {
-  id          String  @id @default(cuid())
-  name        String  @unique
-  description String?
-  faqs        FAQ[]
+  id           String                   @id @default(cuid())
+  name         String                   @unique
+  description  String?
+  faqs         FAQ[]
+  translations FAQCategoryTranslation[]
 }
 
 model FAQ {
-  id         String      @id @default(cuid())
-  question   String
-  answer     String
-  categoryId String
-  category   FAQCategory @relation(fields: [categoryId], references: [id])
-  createdAt  DateTime    @default(now())
-  updatedAt  DateTime    @updatedAt
+  id           String           @id @default(cuid())
+  question     String
+  answer       String
+  categoryId   String
+  category     FAQCategory      @relation(fields: [categoryId], references: [id])
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  translations FAQTranslation[]
 }
 
 model DocumentTemplate {
-  id          String   @id @default(cuid())
-  title       String
+  id           String                        @id @default(cuid())
+  title        String
+  description  String
+  category     String
+  downloads    Int                           @default(0)
+  content      String
+  createdAt    DateTime                      @default(now())
+  updatedAt    DateTime                      @updatedAt
+  translations DocumentTemplateTranslation[]
+}
+
+model LanguageTranslation {
+  id         String   @id @default(cuid())
+  locale     String
+  name       String
+  languageId String
+  language   Language @relation(fields: [languageId], references: [id], onDelete: Cascade)
+
+  @@unique([languageId, locale])
+  @@index([locale])
+}
+
+model LawyerProfileTranslation {
+  id              String        @id @default(cuid())
+  locale          String
+  bio             String?       @db.Text
+  lawyerProfileId String
+  lawyerProfile   LawyerProfile @relation(fields: [lawyerProfileId], references: [id], onDelete: Cascade)
+
+  @@unique([lawyerProfileId, locale])
+  @@index([locale])
+}
+
+model SpecializationTranslation {
+  id               String         @id @default(cuid())
+  locale           String
+  name             String
+  description      String?
+  specializationId String
+  specialization   Specialization @relation(fields: [specializationId], references: [id], onDelete: Cascade)
+
+  @@unique([specializationId, locale])
+  @@index([locale])
+}
+
+model FAQCategoryTranslation {
+  id         String      @id @default(cuid())
+  locale     String
+  name       String
+  description String?
+  categoryId String
+  category   FAQCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([categoryId, locale])
+  @@index([locale])
+}
+
+model FAQTranslation {
+  id      String @id @default(cuid())
+  locale  String
+  question String
+  answer  String
+  faqId   String
+  faq     FAQ    @relation(fields: [faqId], references: [id], onDelete: Cascade)
+
+  @@unique([faqId, locale])
+  @@index([locale])
+}
+
+model DocumentTemplateTranslation {
+  id         String           @id @default(cuid())
+  locale     String
+  title      String
   description String
-  category    String
-  downloads   Int      @default(0)
-  content     String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  category   String
+  content    String
+  templateId String
+  template   DocumentTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@unique([templateId, locale])
+  @@index([locale])
 }
