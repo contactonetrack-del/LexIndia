@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
+
 import { authOptions } from '@/lib/auth';
+import { getApiLocalizedText } from '@/lib/i18n/api';
 import prisma from '@/lib/prisma';
 
 export async function POST(
@@ -10,13 +12,16 @@ export async function POST(
   const session = await getServerSession(authOptions);
   
   if (!session?.user?.id || session.user.role !== 'LAWYER') {
-    return NextResponse.json({ error: 'Unauthorized. Only lawyers can mark appointments as completed.' }, { status: 403 });
+    return NextResponse.json(
+      { error: getApiLocalizedText(req, 'Unauthorized. Only lawyers can mark appointments as completed.') },
+      { status: 403 }
+    );
   }
 
   const { id } = await params;
 
   if (!id) {
-    return NextResponse.json({ error: 'Missing appointment ID' }, { status: 400 });
+    return NextResponse.json({ error: getApiLocalizedText(req, 'Missing appointment ID') }, { status: 400 });
   }
 
   try {
@@ -26,7 +31,7 @@ export async function POST(
     });
 
     if (!lawyerProfile) {
-      return NextResponse.json({ error: 'Lawyer profile not found' }, { status: 404 });
+      return NextResponse.json({ error: getApiLocalizedText(req, 'Lawyer profile not found') }, { status: 404 });
     }
 
     // 2. Find Appointment and verify it belongs to this lawyer
@@ -35,16 +40,22 @@ export async function POST(
     });
 
     if (!appointment) {
-      return NextResponse.json({ error: 'Appointment not found' }, { status: 404 });
+      return NextResponse.json({ error: getApiLocalizedText(req, 'Appointment not found') }, { status: 404 });
     }
 
     if (appointment.lawyerId !== lawyerProfile.id) {
-      return NextResponse.json({ error: 'Forbidden. You do not own this appointment.' }, { status: 403 });
+      return NextResponse.json(
+        { error: getApiLocalizedText(req, 'Forbidden. You do not own this appointment.') },
+        { status: 403 }
+      );
     }
 
     // 3. Ensure the appointment date has passed (can't complete future appointments)
     if (new Date(appointment.date) > new Date()) {
-       return NextResponse.json({ error: 'Cannot complete an appointment before its scheduled time.' }, { status: 400 });
+       return NextResponse.json(
+         { error: getApiLocalizedText(req, 'Cannot complete an appointment before its scheduled time.') },
+         { status: 400 }
+       );
     }
 
     // 4. Update status -> 'COMPLETED', payoutStatus -> 'ELIGIBLE'
@@ -60,6 +71,9 @@ export async function POST(
 
   } catch (error) {
     console.error('[API /appointments/[id]/complete] Error:', error);
-    return NextResponse.json({ error: 'Internal server error while completing appointment.' }, { status: 500 });
+    return NextResponse.json(
+      { error: getApiLocalizedText(req, 'Internal server error while completing appointment.') },
+      { status: 500 }
+    );
   }
 }

@@ -1,22 +1,23 @@
-import { Metadata } from 'next';
+import type { Metadata } from 'next';
+
+import { createLocalizedMetadata } from '@/lib/i18n/metadata';
+import { getMessages } from '@/lib/i18n/messages';
+import { getRequestLocale } from '@/lib/i18n/request';
+
 import HomePageClient from './HomePageClient';
 
-export const metadata: Metadata = {
-  title: 'LexIndia | Get Legal Help in Minutes',
-  description: 'Connect with verified top-rated lawyers across India. Instantly book video consultations, access legal templates, and chat with our 24/7 AI Legal Assistant.',
-  keywords: 'legal help India, find lawyer, online consultation lawyer, legal rights India, LexIndia, verified lawyers, legal expert advice, Indian law guide',
-  openGraph: {
-    title: 'LexIndia | Get Legal Help in Minutes',
-    description: 'Connect with verified top-rated lawyers across India. Instantly book video consultations, access legal templates, and chat with our 24/7 AI Legal Assistant.',
-    url: 'https://lexindia.vercel.app',
-    siteName: 'LexIndia',
-    locale: 'en_IN',
-    type: 'website',
-  },
-  alternates: {
-    canonical: 'https://lexindia.vercel.app',
-  }
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getRequestLocale();
+  const messages = getMessages(locale);
+
+  return createLocalizedMetadata({
+    locale,
+    pathname: '/',
+    title: `LexIndia | ${messages.hero.title}`,
+    description: messages.hero.subtitle,
+    keywords: ['LexIndia', messages.nav.lawyers, messages.nav.knowledge, messages.nav.templates],
+  });
+}
 
 export default function Page() {
   return <HomePageClient />;

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
+
 import { authOptions } from '@/lib/auth';
+import { getApiLocalizedTemplate, getApiLocalizedText } from '@/lib/i18n/api';
 import prisma from '@/lib/prisma';
 
 // ============================================================
@@ -15,20 +17,27 @@ export async function PATCH(req: NextRequest, { params }: Props) {
   const { id } = await params;
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
+    return NextResponse.json({ error: getApiLocalizedText(req, 'Authentication required.') }, { status: 401 });
   }
 
   let body: { status?: unknown };
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 });
+    return NextResponse.json({ error: getApiLocalizedText(req, 'Invalid request body.') }, { status: 400 });
   }
 
   const { status } = body;
   const validStatuses = ['CONFIRMED', 'CANCELLED', 'COMPLETED'];
   if (!status || !validStatuses.includes(status as string)) {
-    return NextResponse.json({ error: `status must be one of: ${validStatuses.join(', ')}.` }, { status: 400 });
+    return NextResponse.json(
+      {
+        error: getApiLocalizedTemplate(req, 'status must be one of: {statuses}.', {
+          statuses: validStatuses.join(', '),
+        }),
+      },
+      { status: 400 }
+    );
   }
 
   // Fetch the appointment with related data for permission checking
@@ -40,7 +49,7 @@ export async function PATCH(req: NextRequest, { params }: Props) {
   });
 
   if (!appointment) {
-    return NextResponse.json({ error: 'Appointment not found.' }, { status: 404 });
+    return NextResponse.json({ error: getApiLocalizedText(req, 'Appointment not found.') }, { status: 404 });
   }
 
   const userId = session.user.id;
@@ -53,17 +62,29 @@ export async function PATCH(req: NextRequest, { params }: Props) {
   // - Lawyer can CONFIRM, CANCEL, or COMPLETE their own appointment
   if (isCitizen) {
     if (status !== 'CANCELLED') {
-      return NextResponse.json({ error: 'Citizens can only cancel appointments.' }, { status: 403 });
+      return NextResponse.json(
+        { error: getApiLocalizedText(req, 'Citizens can only cancel appointments.') },
+        { status: 403 }
+      );
     }
     if (appointment.status === 'COMPLETED') {
-      return NextResponse.json({ error: 'Cannot cancel a completed appointment.' }, { status: 400 });
+      return NextResponse.json(
+        { error: getApiLocalizedText(req, 'Cannot cancel a completed appointment.') },
+        { status: 400 }
+      );
     }
   } else if (isLawyer) {
     if (appointment.status === 'CANCELLED') {
-      return NextResponse.json({ error: 'Cannot update a cancelled appointment.' }, { status: 400 });
+      return NextResponse.json(
+        { error: getApiLocalizedText(req, 'Cannot update a cancelled appointment.') },
+        { status: 400 }
+      );
     }
   } else {
-    return NextResponse.json({ error: 'Not authorised to update this appointment.' }, { status: 403 });
+    return NextResponse.json(
+      { error: getApiLocalizedText(req, 'Not authorised to update this appointment.') },
+      { status: 403 }
+    );
   }
 
   try {
@@ -75,6 +96,6 @@ export async function PATCH(req: NextRequest, { params }: Props) {
     return NextResponse.json({ appointment: updated });
   } catch (error) {
     console.error('[Appointments PATCH] Error:', error);
-    return NextResponse.json({ error: 'Failed to update appointment.' }, { status: 500 });
+    return NextResponse.json({ error: getApiLocalizedText(req, 'Failed to update appointment.') }, { status: 500 });
   }
 }

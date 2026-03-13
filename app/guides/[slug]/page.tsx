@@ -1,10 +1,15 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
 import {
   BookOpen, Clock, Shield, ArrowLeft, ArrowRight,
   CheckCircle, AlertTriangle, FileText, Phone
 } from 'lucide-react';
+
+import { getMemoryLocalizedText, localizeTreeFromMemory } from '@/lib/content/localized';
+import type { Locale } from '@/lib/i18n/config';
+import { createLocalizedMetadata } from '@/lib/i18n/metadata';
+import { withLocalePrefix } from '@/lib/i18n/navigation';
+import { getRequestLocale } from '@/lib/i18n/request';
 
 // ============================================================
 // Guide Content Repository
@@ -411,21 +416,57 @@ const GUIDES: Record<string, GuideContent> = {
 
 };
 
+const GUIDE_PAGE_COPY = {
+  comingSoonTitle: 'Guide Coming Soon',
+  comingSoonBody:
+    'Our legal team is working on this guide. In the meantime, use our AI assistant or book a verified lawyer.',
+  browseAllGuides: 'Browse All Guides',
+  findVerifiedLawyer: 'Find a Verified Lawyer',
+  allGuides: 'All Guides',
+  minRead: 'min read',
+  updatedLabel: 'Updated',
+  reviewedByLawyers: 'Reviewed by lawyers',
+  legalDisclaimerTitle: 'General Information Only',
+  legalDisclaimerBody:
+    'This guide explains general Indian law principles and does not constitute legal advice. For your specific situation, consult a',
+  verifiedLawyer: 'verified lawyer',
+  whoThisGuideIsFor: 'Who This Guide Is For',
+  yourKeyRights: 'Your Key Rights',
+  stepByStepGuide: 'Step-by-Step Guide',
+  documentsYouMayNeed: 'Documents You May Need',
+  emergencyMistakesTitle: 'WHAT NOT TO DO (Strictly Avoid)',
+  commonMistakesToAvoid: 'Common Mistakes to Avoid',
+  mistakesToAvoid: 'Mistakes to Avoid',
+  frequentlyAskedQuestions: 'Frequently Asked Questions',
+  whenToConsultLawyer: 'When to Consult a Lawyer',
+  mistakesSidebarEmergency: 'WHAT NOT TO DO',
+  helpfulAuthorities: 'Helpful Authorities',
+  visitWebsite: 'Visit website',
+  relatedGuides: 'Related Guides',
+  browseAllGuidesArrow: 'Browse all guides ->',
+} as const;
+
 // Fallback for guides not yet written
-function ComingSoonGuide({ title }: { title: string }) {
+function ComingSoonGuide({ title, locale }: { title: string; locale: Locale }) {
+  const copy = localizeTreeFromMemory(GUIDE_PAGE_COPY, locale);
+
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center text-center px-4 py-16">
-      <BookOpen className="w-12 h-12 text-[#1E3A8A] mb-4" />
-      <h1 className="text-2xl font-bold text-gray-900 mb-2">{title || 'Guide Coming Soon'}</h1>
-      <p className="text-gray-500 mb-6 max-w-md">
-        Our legal team is working on this guide. In the meantime, use our AI assistant or book a verified lawyer.
-      </p>
-      <div className="flex flex-col sm:flex-row gap-4 justify-center">
-        <Link href="/guides" className="border border-[#1E3A8A] text-[#1E3A8A] px-6 py-3 rounded-xl font-semibold hover:bg-blue-50 transition-colors">
-          Browse All Guides
+    <div className="flex min-h-screen flex-col items-center justify-center bg-muted px-4 py-16 text-center">
+      <BookOpen className="mb-4 h-12 w-12 text-primary" />
+      <h1 className="mb-2 text-2xl font-bold text-foreground">{title || copy.comingSoonTitle}</h1>
+      <p className="mb-6 max-w-md text-muted-foreground">{copy.comingSoonBody}</p>
+      <div className="flex flex-col justify-center gap-4 sm:flex-row">
+        <Link
+          href={withLocalePrefix('/guides', locale)}
+          className="rounded-xl border border-primary px-6 py-3 font-semibold text-primary transition-colors hover:bg-primary/10"
+        >
+          {copy.browseAllGuides}
         </Link>
-        <Link href="/lawyers" className="bg-[#1E3A8A] text-white px-6 py-3 rounded-xl font-semibold hover:bg-blue-800 transition-colors">
-          Find a Verified Lawyer
+        <Link
+          href={withLocalePrefix('/lawyers', locale)}
+          className="rounded-xl bg-primary px-6 py-3 font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+        >
+          {copy.findVerifiedLawyer}
         </Link>
       </div>
     </div>
@@ -435,39 +476,62 @@ function ComingSoonGuide({ title }: { title: string }) {
 type Props = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const locale = await getRequestLocale();
   const { slug } = await params;
-  const guide = GUIDES[slug];
+  const guide = GUIDES[slug]
+    ? localizeTreeFromMemory(GUIDES[slug], locale, {
+        skipKeys: ['slug', 'categorySlug', 'url', 'contact'],
+      })
+    : null;
+
   if (!guide) {
-    return { title: 'Legal Guide | LexIndia' };
+    return createLocalizedMetadata({
+      locale,
+      pathname: `/guides/${slug}`,
+      title: `${getMemoryLocalizedText('Guide Coming Soon', locale)} | LexIndia`,
+      description: getMemoryLocalizedText(
+        'Our legal team is working on this guide. In the meantime, use our AI assistant or book a verified lawyer.',
+        locale
+      ),
+    });
   }
-  return {
+  return createLocalizedMetadata({
+    locale,
+    pathname: `/guides/${slug}`,
     title: `${guide.title} | LexIndia`,
     description: guide.summary,
-    alternates: { canonical: `/guides/${slug}` },
-  };
+  });
 }
 
 export default async function GuidePage({ params }: Props) {
+  const locale = await getRequestLocale();
   const { slug } = await params;
-  const guide = GUIDES[slug];
+  const copy = localizeTreeFromMemory(GUIDE_PAGE_COPY, locale);
+  const guide = GUIDES[slug]
+    ? localizeTreeFromMemory(GUIDES[slug], locale, {
+        skipKeys: ['slug', 'categorySlug', 'url', 'contact'],
+      })
+    : null;
 
   // For unknown slugs that look valid, show "coming soon" rather than 404
   // (many guide stubs are listed on /guides but not written yet)
   if (!guide) {
-    return <ComingSoonGuide title="" />;
+    return <ComingSoonGuide title="" locale={locale} />;
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-muted">
       {/* Hero */}
-      <div className="bg-[#1E3A8A] text-white py-12">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-2 text-blue-300 text-sm mb-3">
-            <Link href="/guides" className="hover:text-white flex items-center gap-1">
-              <ArrowLeft className="w-3.5 h-3.5" /> All Guides
+      <div className="bg-primary py-12 text-primary-foreground">
+        <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
+          <div className="mb-3 flex items-center gap-2 text-sm text-primary-foreground/80">
+            <Link href={withLocalePrefix('/guides', locale)} className="flex items-center gap-1 transition-colors hover:text-primary-foreground">
+              <ArrowLeft className="h-3.5 w-3.5" /> {copy.allGuides}
             </Link>
-            <span>·</span>
-            <Link href={`/guides?cat=${guide.categorySlug}`} className="hover:text-white">{guide.category}</Link>
+            <span>/</span>
+            <Link href={withLocalePrefix(`/guides?cat=${guide.categorySlug}`, locale)} className="transition-colors hover:text-primary-foreground">
+              {guide.category}
+            </Link>
           </div>
 
           {/* JSON-LD FAQ Schema */}
@@ -490,44 +554,53 @@ export default async function GuidePage({ params }: Props) {
               }}
             />
           )}
-          <h1 className="text-2xl sm:text-3xl font-bold mb-4">{guide.title}</h1>
-          <p className="text-blue-200 leading-relaxed mb-4">{guide.summary}</p>
-          <div className="flex flex-wrap gap-4 text-xs text-blue-300">
-            <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {guide.readTime} min read</span>
-            <span>Updated: {guide.lastUpdated}</span>
-            <span className="flex items-center gap-1 text-green-300"><CheckCircle className="w-3.5 h-3.5" /> Reviewed by lawyers</span>
+          <h1 className="mb-4 text-2xl font-bold sm:text-3xl">{guide.title}</h1>
+          <p className="mb-4 leading-relaxed text-primary-foreground/85">{guide.summary}</p>
+          <div className="flex flex-wrap gap-4 text-xs text-primary-foreground/75">
+            <span className="flex items-center gap-1">
+              <Clock className="h-3.5 w-3.5" /> {guide.readTime} {copy.minRead}
+            </span>
+            <span>
+              {copy.updatedLabel}: {guide.lastUpdated}
+            </span>
+            <span className="flex items-center gap-1 text-success">
+              <CheckCircle className="h-3.5 w-3.5" /> {copy.reviewedByLawyers}
+            </span>
           </div>
         </div>
       </div>
 
       {/* Legal Disclaimer */}
-      <div className="bg-amber-50 border-b border-amber-200">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+      <div className="border-b border-warning/30 bg-warning/10">
+        <div className="mx-auto max-w-4xl px-4 py-3 sm:px-6 lg:px-8">
           <div className="flex items-start gap-2">
-            <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
-            <p className="text-amber-800 text-xs">
-              <strong>General Information Only:</strong> This guide explains general Indian law principles and does not constitute legal advice.
-              For your specific situation, consult a <Link href="/lawyers" className="underline font-medium">verified lawyer</Link>.
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
+            <p className="text-xs text-foreground">
+              <strong>{copy.legalDisclaimerTitle}:</strong> {copy.legalDisclaimerBody}{' '}
+              <Link href={withLocalePrefix('/lawyers', locale)} className="font-medium underline">
+                {copy.verifiedLawyer}
+              </Link>
+              .
             </p>
           </div>
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-8">
 
             {/* Who this is for */}
-            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-              <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <span className="w-6 h-6 bg-blue-100 text-[#1E3A8A] rounded-full flex items-center justify-center text-xs font-bold">?</span>
-                Who This Guide Is For
+            <div className="rounded-2xl border border-border bg-background p-6 shadow-sm">
+              <h2 className="mb-4 flex items-center gap-2 text-lg font-bold text-foreground">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">?</span>
+                {copy.whoThisGuideIsFor}
               </h2>
               <ul className="space-y-2">
                 {guide.whoThisIsFor.map((item, i) => (
-                  <li key={i} className="flex items-start gap-2 text-sm text-gray-600">
-                    <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
+                  <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
+                    <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-success" />
                     {item}
                   </li>
                 ))}
@@ -535,15 +608,15 @@ export default async function GuidePage({ params }: Props) {
             </div>
 
             {/* Key Rights */}
-            <div className="bg-blue-50 border border-blue-200 rounded-2xl p-6">
-              <h2 className="text-lg font-bold text-[#1E3A8A] mb-4 flex items-center gap-2">
-                <Shield className="w-5 h-5" />
-                Your Key Rights
+            <div className="rounded-2xl border border-primary/30 bg-primary/10 p-6">
+              <h2 className="mb-4 flex items-center gap-2 text-lg font-bold text-primary">
+                <Shield className="h-5 w-5" />
+                {copy.yourKeyRights}
               </h2>
               <ul className="space-y-3">
                 {guide.keyRights.map((right, i) => (
-                  <li key={i} className="flex items-start gap-2 text-sm text-blue-900">
-                    <span className="w-5 h-5 bg-[#1E3A8A] text-white rounded-full flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">{i + 1}</span>
+                  <li key={i} className="flex items-start gap-2 text-sm text-foreground">
+                    <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">{i + 1}</span>
                     {right}
                   </li>
                 ))}
@@ -551,17 +624,17 @@ export default async function GuidePage({ params }: Props) {
             </div>
 
             {/* Step-by-Step Process */}
-            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-              <h2 className="text-lg font-bold text-gray-900 mb-5">Step-by-Step Guide</h2>
+            <div className="rounded-2xl border border-border bg-background p-6 shadow-sm">
+              <h2 className="mb-5 text-lg font-bold text-foreground">{copy.stepByStepGuide}</h2>
               <div className="space-y-5">
                 {guide.steps.map((s, i) => (
                   <div key={i} className="flex gap-4">
-                    <div className="w-8 h-8 bg-[#1E3A8A] text-white rounded-full flex items-center justify-center font-bold text-sm shrink-0">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground">
                       {i + 1}
                     </div>
                     <div>
-                      <h3 className="font-semibold text-gray-900 mb-1 text-sm">{s.step}</h3>
-                      <p className="text-gray-600 text-sm leading-relaxed">{s.detail}</p>
+                      <h3 className="mb-1 text-sm font-semibold text-foreground">{s.step}</h3>
+                      <p className="text-sm leading-relaxed text-muted-foreground">{s.detail}</p>
                     </div>
                   </div>
                 ))}
@@ -569,14 +642,14 @@ export default async function GuidePage({ params }: Props) {
             </div>
 
             {/* Documents Needed */}
-            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-              <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <FileText className="w-5 h-5 text-gray-400" /> Documents You May Need
+            <div className="rounded-2xl border border-border bg-background p-6 shadow-sm">
+              <h2 className="mb-4 flex items-center gap-2 text-lg font-bold text-foreground">
+                <FileText className="h-5 w-5 text-muted-foreground" /> {copy.documentsYouMayNeed}
               </h2>
               <ul className="space-y-2">
                 {guide.documents.map((doc, i) => (
-                  <li key={i} className="flex items-start gap-2 text-sm text-gray-600">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#D4AF37] mt-2 shrink-0" />
+                  <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
+                    <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />
                     {doc}
                   </li>
                 ))}
@@ -584,15 +657,15 @@ export default async function GuidePage({ params }: Props) {
             </div>
 
             {/* Common Mistakes */}
-            <div className="bg-red-50 border border-red-200 rounded-2xl p-6">
-              <h2 className={`text-lg font-bold mb-4 flex items-center gap-2 ${guide.categorySlug === 'emergency-law' ? 'text-red-700 uppercase tracking-wide' : 'text-red-900'}`}>
-                <AlertTriangle className={`w-5 h-5 ${guide.categorySlug === 'emergency-law' ? 'text-red-600' : 'text-red-500'}`} /> 
-                {guide.categorySlug === 'emergency-law' ? 'WHAT NOT TO DO (Strictly Avoid)' : 'Common Mistakes to Avoid'}
+            <div className="rounded-2xl border border-danger/30 bg-danger/10 p-6">
+              <h2 className={`mb-4 flex items-center gap-2 text-lg font-bold ${guide.categorySlug === 'emergency-law' ? 'uppercase tracking-wide text-danger' : 'text-danger'}`}>
+                <AlertTriangle className="h-5 w-5 text-danger" />
+                {guide.categorySlug === 'emergency-law' ? copy.emergencyMistakesTitle : copy.commonMistakesToAvoid}
               </h2>
               <ul className="space-y-2">
                 {guide.commonMistakes.map((m, i) => (
-                  <li key={i} className="flex items-start gap-2 text-sm text-red-800">
-                    <span className="w-1.5 h-1.5 rounded-full bg-red-500 mt-2 shrink-0" />
+                  <li key={i} className="flex items-start gap-2 text-sm text-danger">
+                    <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-danger" />
                     {m}
                   </li>
                 ))}
@@ -600,13 +673,13 @@ export default async function GuidePage({ params }: Props) {
             </div>
 
             {/* FAQs */}
-            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-              <h2 className="text-lg font-bold text-gray-900 mb-5">Frequently Asked Questions</h2>
+            <div className="rounded-2xl border border-border bg-background p-6 shadow-sm">
+              <h2 className="mb-5 text-lg font-bold text-foreground">{copy.frequentlyAskedQuestions}</h2>
               <div className="space-y-5">
                 {guide.faqs.map((faq, i) => (
-                  <div key={i} className="border-b border-gray-100 pb-5 last:border-0 last:pb-0">
-                    <h3 className="font-semibold text-gray-900 text-sm mb-2">{faq.q}</h3>
-                    <p className="text-gray-600 text-sm leading-relaxed">{faq.a}</p>
+                  <div key={i} className="border-b border-border pb-5 last:border-0 last:pb-0">
+                    <h3 className="mb-2 text-sm font-semibold text-foreground">{faq.q}</h3>
+                    <p className="text-sm leading-relaxed text-muted-foreground">{faq.a}</p>
                   </div>
                 ))}
               </div>
@@ -616,73 +689,73 @@ export default async function GuidePage({ params }: Props) {
           {/* Sidebar */}
           <div className="space-y-5">
             {/* When to Talk to a Lawyer */}
-            <div className="bg-[#1E3A8A] rounded-2xl p-5 text-white">
-              <h3 className="font-bold mb-3 text-sm">⚖️ When to Consult a Lawyer</h3>
+            <div className="rounded-2xl bg-primary p-5 text-primary-foreground">
+              <h3 className="mb-3 text-sm font-bold">{copy.whenToConsultLawyer}</h3>
               <ul className="space-y-2">
                 {guide.whenToTalkLawyer.map((item, i) => (
-                  <li key={i} className="text-xs text-blue-200 flex items-start gap-1.5">
-                    <ArrowRight className="w-3 h-3 mt-0.5 shrink-0 text-[#D4AF37]" />
+                  <li key={i} className="flex items-start gap-1.5 text-xs text-primary-foreground/85">
+                    <ArrowRight className="mt-0.5 h-3 w-3 shrink-0 text-accent" />
                     {item}
                   </li>
                 ))}
               </ul>
               <Link
-                href="/lawyers"
-                className="block mt-4 text-center bg-[#D4AF37] text-gray-900 py-2.5 rounded-lg text-xs font-bold hover:bg-yellow-500 transition-colors"
+                href={withLocalePrefix('/lawyers', locale)}
+                className="mt-4 block rounded-lg bg-accent py-2.5 text-center text-xs font-bold text-accent-foreground transition-opacity hover:opacity-90"
               >
-                Find a Verified Lawyer
+                {copy.findVerifiedLawyer}
               </Link>
             </div>
 
            {/* Mistakes Sidebar */}
            {guide.commonMistakes.length > 0 && (
-             <div className="bg-red-50 rounded-2xl p-5 border border-red-200">
-               <h3 className={`font-bold mb-3 text-sm flex items-center gap-1 ${guide.categorySlug === 'emergency-law' ? 'text-red-700 uppercase' : 'text-red-900'}`}>
-                 <AlertTriangle className="w-4 h-4 text-red-500" /> 
-                 {guide.categorySlug === 'emergency-law' ? 'WHAT NOT TO DO' : 'Mistakes to Avoid'}
+             <div className="rounded-2xl border border-danger/30 bg-danger/10 p-5">
+               <h3 className={`mb-3 flex items-center gap-1 text-sm font-bold ${guide.categorySlug === 'emergency-law' ? 'uppercase text-danger' : 'text-danger'}`}>
+                 <AlertTriangle className="h-4 w-4 text-danger" />
+                 {guide.categorySlug === 'emergency-law' ? copy.mistakesSidebarEmergency : copy.mistakesToAvoid}
                </h3>
-               <ul className="space-y-2">
-                 {guide.commonMistakes.map((m, i) => (
-                   <li key={i} className="text-xs text-red-800 flex items-start gap-1.5">
-                     <span className="w-1.5 h-1.5 rounded-full bg-red-400 mt-1 shrink-0" />
-                     {m}
-                   </li>
-                 ))}
+                <ul className="space-y-2">
+                  {guide.commonMistakes.map((m, i) => (
+                    <li key={i} className="flex items-start gap-1.5 text-xs text-danger">
+                      <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-danger" />
+                      {m}
+                    </li>
+                  ))}
                </ul>
              </div>
            )}
 
             {/* Authorities & Helplines (Moved Down) */}
-            <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-              <h3 className="font-bold text-gray-900 mb-3 text-sm flex items-center gap-1.5">
-                <Phone className="w-4 h-4 text-[#1E3A8A]" /> Helpful Authorities
+            <div className="rounded-2xl border border-border bg-background p-5 shadow-sm">
+              <h3 className="mb-3 flex items-center gap-1.5 text-sm font-bold text-foreground">
+                <Phone className="h-4 w-4 text-primary" /> {copy.helpfulAuthorities}
               </h3>
               <div className="space-y-3">
                 {guide.authorities.map((auth, i) => (
                   <div key={i} className="text-xs">
-                    <p className="font-semibold text-gray-800">{auth.name}</p>
-                    {auth.contact && <p className="text-[#1E3A8A]"><a href={`tel:${auth.contact}`}>{auth.contact}</a></p>}
-                    {auth.url && <a href={auth.url} target="_blank" rel="noopener noreferrer" className="text-[#1E3A8A] underline">Visit website</a>}
+                    <p className="font-semibold text-foreground">{auth.name}</p>
+                    {auth.contact && <p className="text-primary"><a href={`tel:${auth.contact}`}>{auth.contact}</a></p>}
+                    {auth.url && <a href={auth.url} target="_blank" rel="noopener noreferrer" className="text-primary underline">{copy.visitWebsite}</a>}
                   </div>
                 ))}
               </div>
             </div>
 
             {/* Related Guides */}
-            <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-              <h3 className="font-bold text-gray-900 mb-3 text-sm">Related Guides</h3>
+            <div className="rounded-2xl border border-border bg-background p-5 shadow-sm">
+              <h3 className="mb-3 text-sm font-bold text-foreground">{copy.relatedGuides}</h3>
               <div className="space-y-2">
                 {guide.relatedGuides.map((g) => (
                   <Link
                     key={g.slug}
-                    href={`/guides/${g.slug}`}
-                    className="block text-xs text-[#1E3A8A] hover:underline flex items-center gap-1"
+                    href={withLocalePrefix(`/guides/${g.slug}`, locale)}
+                    className="flex items-center gap-1 text-xs text-primary hover:underline"
                   >
-                    <ArrowRight className="w-3 h-3 shrink-0" /> {g.title}
+                    <ArrowRight className="h-3 w-3 shrink-0" /> {g.title}
                   </Link>
                 ))}
-                <Link href="/guides" className="block text-xs text-gray-400 hover:text-gray-600 mt-2">
-                  Browse all guides →
+                <Link href={withLocalePrefix('/guides', locale)} className="mt-2 block text-xs text-muted-foreground transition-colors hover:text-foreground">
+                  {copy.browseAllGuidesArrow}
                 </Link>
               </div>
             </div>
@@ -692,3 +765,5 @@ export default async function GuidePage({ params }: Props) {
     </div>
   );
 }
+
+

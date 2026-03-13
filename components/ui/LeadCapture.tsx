@@ -1,60 +1,93 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Mail, CheckCircle, ArrowRight } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { ArrowRight, CheckCircle, Mail } from 'lucide-react';
+import { AnimatePresence, motion } from 'motion/react';
+
+import { localizeTreeFromMemory } from '@/lib/content/localized';
+import { useLanguage } from '@/lib/LanguageContext';
 
 export function LeadCapture() {
+  const { fontClass, lang } = useLanguage();
+  const copy = localizeTreeFromMemory(
+    {
+      heading: 'Know Your Rights. Protect Your Future.',
+      body: 'Join readers receiving legal updates, free templates, and practical guidance every week.',
+      weeklyUpdates: 'Weekly updates',
+      freeHandbook: 'Free handbook',
+      noSpam: 'No spam',
+      successTitle: "You're on the list!",
+      successBody: 'Check your inbox for your legal rights handbook.',
+      emailAddressLabel: 'Email address',
+      emailPlaceholder: 'Enter your email address',
+      subscribing: 'Subscribing...',
+      submitLabel: 'Get Free Handbook',
+      privacyNote: 'We respect your privacy. Unsubscribe at any time.',
+    } as const,
+    lang
+  );
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState<'idle' | 'loading' | 'success'>('idle');
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
     if (!email || !email.includes('@')) return;
-    
+
     setStatus('loading');
-    
-    // Simulate API call to Add Subscriber
+
     setTimeout(() => {
       setStatus('success');
     }, 1500);
   };
 
   return (
-    <div className="bg-[#1E3A8A] rounded-3xl p-8 md:p-12 text-white shadow-2xl overflow-hidden relative border border-[#2B4B9F]">
-      <div className="absolute top-0 right-0 -m-8 w-40 h-40 bg-[#D4AF37]/20 rounded-full blur-3xl pointer-events-none"></div>
-      <div className="absolute bottom-0 left-0 -m-8 w-40 h-40 bg-blue-400/20 rounded-full blur-3xl pointer-events-none"></div>
-      
-      <div className="relative z-10 flex flex-col md:flex-row items-center gap-8 md:gap-12">
+    <div className="relative overflow-hidden rounded-3xl border border-primary/20 bg-gradient-to-br from-primary to-primary/80 p-8 text-primary-foreground shadow-2xl md:p-12">
+      <div className="pointer-events-none absolute left-0 top-0 -m-8 h-40 w-40 rounded-full bg-accent/20 blur-3xl" />
+      <div className="pointer-events-none absolute bottom-0 right-0 -m-8 h-40 w-40 rounded-full bg-background/20 blur-3xl" />
+
+      <div className="relative z-10 flex flex-col items-center gap-8 md:flex-row md:gap-12">
         <div className="flex-1 text-center md:text-left">
-          <h3 className="text-3xl md:text-4xl font-bold mb-4 tracking-tight">Know Your Rights. Protect Your Future.</h3>
-          <p className="text-blue-100 text-lg mb-6 max-w-xl mx-auto md:mx-0">
-            Join 50,000+ Indians receiving vital legal updates, free templates, and practical advice every week.
+          <h3 className={`mb-4 text-3xl font-bold tracking-tight md:text-4xl ${fontClass}`}>
+            {copy.heading}
+          </h3>
+          <p className={`mb-6 max-w-xl text-lg text-primary-foreground/80 ${fontClass}`}>
+            {copy.body}
           </p>
-          <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 text-sm text-blue-200">
-            <span className="flex items-center gap-1"><CheckCircle className="w-4 h-4 text-[#D4AF37]" /> Weekly updates</span>
-            <span className="flex items-center gap-1"><CheckCircle className="w-4 h-4 text-[#D4AF37]" /> Free eBook</span>
-            <span className="flex items-center gap-1"><CheckCircle className="w-4 h-4 text-[#D4AF37]" /> No spam</span>
+          <div className={`flex flex-wrap items-center justify-center gap-4 text-sm text-primary-foreground/75 md:justify-start ${fontClass}`}>
+            <span className="flex items-center gap-1">
+              <CheckCircle className="h-4 w-4 text-accent" />
+              {copy.weeklyUpdates}
+            </span>
+            <span className="flex items-center gap-1">
+              <CheckCircle className="h-4 w-4 text-accent" />
+              {copy.freeHandbook}
+            </span>
+            <span className="flex items-center gap-1">
+              <CheckCircle className="h-4 w-4 text-accent" />
+              {copy.noSpam}
+            </span>
           </div>
         </div>
 
-        <div className="w-full md:w-[400px] shrink-0 bg-white/10 p-6 rounded-2xl backdrop-blur-sm border border-white/10">
+        <div className="w-full shrink-0 rounded-2xl border border-primary-foreground/20 bg-background/10 p-6 backdrop-blur-sm md:w-[400px]">
           <AnimatePresence mode="wait">
             {status === 'success' ? (
-              <motion.div 
+              <motion.div
                 key="success"
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="text-center py-6"
+                className="py-6 text-center"
               >
-                <div className="w-16 h-16 bg-green-500/20 text-green-400 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <CheckCircle className="w-8 h-8" />
+                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-success/20 text-success">
+                  <CheckCircle className="h-8 w-8" />
                 </div>
-                <h4 className="text-xl font-bold mb-2">You&apos;re on the list!</h4>
-                <p className="text-blue-100 text-sm">Check your inbox for your free Legal Rights Handbook.</p>
+                <h4 className={`mb-2 text-xl font-bold ${fontClass}`}>{copy.successTitle}</h4>
+                <p className={`text-sm text-primary-foreground/80 ${fontClass}`}>
+                  {copy.successBody}
+                </p>
               </motion.div>
             ) : (
-              <motion.form 
+              <motion.form
                 key="form"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -63,17 +96,19 @@ export function LeadCapture() {
                 className="flex flex-col gap-4"
               >
                 <div>
-                  <label htmlFor="email" className="sr-only">Email address</label>
+                  <label htmlFor="lead-email" className="sr-only">
+                    {copy.emailAddressLabel}
+                  </label>
                   <div className="relative">
-                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <Mail className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
                     <input
-                      id="email"
+                      id="lead-email"
                       type="email"
                       required
                       value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="Enter your email address"
-                      className="w-full pl-12 pr-4 py-4 rounded-xl bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#D4AF37] shadow-inner"
+                      onChange={(event) => setEmail(event.target.value)}
+                      placeholder={copy.emailPlaceholder}
+                      className={`w-full rounded-xl bg-background px-4 py-4 pl-12 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent ${fontClass}`}
                       disabled={status === 'loading'}
                     />
                   </div>
@@ -81,19 +116,19 @@ export function LeadCapture() {
                 <button
                   type="submit"
                   disabled={status === 'loading'}
-                  className="w-full bg-[#D4AF37] text-gray-900 font-bold py-4 rounded-xl flex justify-center items-center gap-2 hover:bg-yellow-500 transition-colors shadow-lg disabled:opacity-70 disabled:cursor-not-allowed group"
+                  className={`group flex w-full items-center justify-center gap-2 rounded-xl bg-accent py-4 font-bold text-accent-foreground transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-70 ${fontClass}`}
                 >
                   {status === 'loading' ? (
-                    'Subscribing...'
+                    copy.subscribing
                   ) : (
                     <>
-                      Get Free Handbook
-                      <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                      {copy.submitLabel}
+                      <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
                     </>
                   )}
                 </button>
-                <p className="text-xs text-center text-blue-200 mt-2">
-                  We respect your privacy. Unsubscribe at any time.
+                <p className={`mt-2 text-center text-xs text-primary-foreground/75 ${fontClass}`}>
+                  {copy.privacyNote}
                 </p>
               </motion.form>
             )}

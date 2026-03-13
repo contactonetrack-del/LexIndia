@@ -1,8 +1,13 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { Loader2, Save, FileText, Clock, AlertCircle } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { AlertCircle, Clock, FileText, Loader2, Save } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+
+import { localizeTreeFromMemory } from '@/lib/content/localized';
+import { REQUEST_LOCALE_HEADER } from '@/lib/i18n/config';
+import { formatDateTime } from '@/lib/i18n/format';
+import { useLanguage } from '@/lib/LanguageContext';
 
 interface CaseNote {
   id: string;
@@ -16,7 +21,21 @@ interface CaseWorkspaceProps {
   citizenName: string;
 }
 
+const COPY = {
+  loadError: 'Failed to load notes',
+  saveError: 'Failed to save note',
+  saveSuccess: 'Case note added securely.',
+  titlePrefix: 'Private Case File:',
+  confidentialityLabel: 'Confidential',
+  emptyState: 'No private notes have been added to this consultation yet.',
+  encryptedMemo: 'Encrypted Memo',
+  inputPlaceholder: 'Document legal strategies, case references, or internal memos here...',
+  saveAction: 'Save Note to Case File',
+} as const;
+
 export default function CaseWorkspace({ appointmentId, citizenName }: CaseWorkspaceProps) {
+  const { lang } = useLanguage();
+  const copy = localizeTreeFromMemory(COPY, lang);
   const [notes, setNotes] = useState<CaseNote[]>([]);
   const [newNote, setNewNote] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -25,16 +44,20 @@ export default function CaseWorkspace({ appointmentId, citizenName }: CaseWorksp
 
   const fetchNotes = React.useCallback(async () => {
     try {
-      const res = await fetch(`/api/appointments/${appointmentId}/notes`);
-      if (!res.ok) throw new Error('Failed to load notes');
-      const data = await res.json();
+      const response = await fetch(`/api/appointments/${appointmentId}/notes`, {
+        headers: {
+          [REQUEST_LOCALE_HEADER]: lang,
+        },
+      });
+      if (!response.ok) throw new Error(copy.loadError);
+      const data = await response.json();
       setNotes(data.notes || []);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (caughtError: any) {
+      setError(caughtError.message);
     } finally {
       setIsLoading(false);
     }
-  }, [appointmentId]);
+  }, [appointmentId, copy.loadError, lang]);
 
   useEffect(() => {
     fetchNotes();
@@ -43,23 +66,27 @@ export default function CaseWorkspace({ appointmentId, citizenName }: CaseWorksp
   const handleSave = async () => {
     if (!newNote.trim()) return;
     setIsSaving(true);
+
     try {
-      const res = await fetch(`/api/appointments/${appointmentId}/notes`, {
+      const response = await fetch(`/api/appointments/${appointmentId}/notes`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          [REQUEST_LOCALE_HEADER]: lang,
+        },
         body: JSON.stringify({ text: newNote }),
       });
 
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || 'Failed to save note');
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error || copy.saveError);
       }
 
       setNewNote('');
-      toast.success('Case note added securely.');
+      toast.success(copy.saveSuccess);
       await fetchNotes();
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (caughtError: any) {
+      toast.error(caughtError.message);
     } finally {
       setIsSaving(false);
     }
@@ -67,49 +94,53 @@ export default function CaseWorkspace({ appointmentId, citizenName }: CaseWorksp
 
   if (isLoading) {
     return (
-      <div className="p-6 flex items-center justify-center bg-gray-50/50 rounded-xl border border-gray-100 mt-4">
-        <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+      <div className="mt-4 flex items-center justify-center rounded-xl border border-border bg-muted/50 p-6">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
   if (error) {
-     return (
-        <div className="p-4 bg-red-50 text-red-600 rounded-xl border border-red-100 text-sm flex items-center gap-2 mt-4">
-           <AlertCircle className="w-4 h-4" /> {error}
-        </div>
-     );
+    return (
+      <div className="mt-4 flex items-center gap-2 rounded-xl border border-danger/30 bg-danger/10 p-4 text-sm text-danger">
+        <AlertCircle className="h-4 w-4" /> {error}
+      </div>
+    );
   }
 
   return (
-    <div className="mt-4 bg-slate-50 border border-slate-200 rounded-xl overflow-hidden shadow-inner">
-      <div className="bg-slate-100 px-4 py-3 border-b border-slate-200 flex items-center justify-between">
-         <h4 className="font-semibold text-slate-800 flex items-center gap-2 text-sm">
-            <FileText className="w-4 h-4 text-slate-500" /> 
-            Private Case File: <span className="text-[#1E3A8A]">{citizenName}</span>
-         </h4>
-         <span className="text-xs font-semibold text-slate-500 bg-slate-200 px-2.5 py-1 rounded-full border border-slate-300">
-             Confidential
-         </span>
+    <div className="mt-4 overflow-hidden rounded-xl border border-border bg-surface shadow-inner">
+      <div className="flex items-center justify-between border-b border-border bg-muted px-4 py-3">
+        <h4 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+          <FileText className="h-4 w-4 text-muted-foreground" />
+          {copy.titlePrefix} <span className="text-primary">{citizenName}</span>
+        </h4>
+        <span className="rounded-full border border-border bg-surface px-2.5 py-1 text-xs font-semibold text-muted-foreground">
+          {copy.confidentialityLabel}
+        </span>
       </div>
 
-      <div className="p-4 space-y-4">
+      <div className="space-y-4 p-4">
         {notes.length === 0 ? (
-          <div className="text-center py-6 text-slate-400 text-sm">
-            No private notes have been added to this consultation yet.
-          </div>
+          <div className="py-6 text-center text-sm text-muted-foreground">{copy.emptyState}</div>
         ) : (
-          <div className="space-y-3 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
+          <div className="custom-scrollbar max-h-60 space-y-3 overflow-y-auto pr-2">
             {notes.map((note) => (
-              <div key={note.id} className="bg-white p-3 rounded-lg border border-slate-200 text-sm text-slate-700 shadow-sm relative group">
+              <div
+                key={note.id}
+                className="group relative rounded-lg border border-border bg-background p-3 text-sm text-foreground shadow-sm"
+              >
                 <p className="whitespace-pre-wrap leading-relaxed">{note.text}</p>
-                <div className="mt-3 flex items-center justify-between text-[10px] text-slate-400 font-medium">
+                <div className="mt-3 flex items-center justify-between text-[10px] font-medium text-muted-foreground">
                   <span className="flex items-center gap-1">
-                    <Clock className="w-3 h-3" />
-                    {new Date(note.createdAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
+                    <Clock className="h-3 w-3" />
+                    {formatDateTime(note.createdAt, lang, {
+                      dateStyle: 'medium',
+                      timeStyle: 'short',
+                    })}
                   </span>
-                  <span className="opacity-0 group-hover:opacity-100 transition-opacity">
-                    Encrypted Memo
+                  <span className="opacity-0 transition-opacity group-hover:opacity-100">
+                    {copy.encryptedMemo}
                   </span>
                 </div>
               </div>
@@ -120,18 +151,18 @@ export default function CaseWorkspace({ appointmentId, citizenName }: CaseWorksp
         <div className="pt-2">
           <textarea
             value={newNote}
-            onChange={(e) => setNewNote(e.target.value)}
-            placeholder="Document legal strategies, case references, or internal memos here..."
-            className="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]/20 focus:border-[#1E3A8A] min-h-[100px] resize-y bg-white text-slate-800"
+            onChange={(event) => setNewNote(event.target.value)}
+            placeholder={copy.inputPlaceholder}
+            className="min-h-[100px] w-full resize-y rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
           />
           <div className="mt-3 flex justify-end">
             <button
               onClick={handleSave}
               disabled={isSaving || !newNote.trim()}
-              className="px-4 py-2 bg-slate-800 text-white text-xs font-semibold rounded-lg hover:bg-slate-900 transition-colors disabled:opacity-50 flex items-center gap-1.5 shadow-sm"
+              className="flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 disabled:opacity-50"
             >
-              {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-              Save Note to Case File
+              {isSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+              {copy.saveAction}
             </button>
           </div>
         </div>

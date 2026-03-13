@@ -1,34 +1,189 @@
 @import "tailwindcss";
 
-@theme {
-  --color-foreground: oklch(0.145 0 0);
-  --color-background: oklch(1 0 0);
+@theme inline {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-surface: hsl(var(--surface));
+  --color-surface-hover: hsl(var(--surface-hover));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-border: hsl(var(--border));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-success: hsl(var(--success));
+  --color-warning: hsl(var(--warning));
+  --color-danger: hsl(var(--danger));
+  --color-ring: hsl(var(--ring));
 }
 
 @layer base {
   :root {
     --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --foreground: 222 47% 11%;
+    --surface: 0 0% 100%;
+    --surface-hover: 210 40% 98%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
+    --border: 214 32% 91%;
+    --primary: 221 64% 33%;
+    --primary-foreground: 210 40% 98%;
+    --accent: 43 68% 53%;
+    --accent-foreground: 222 47% 11%;
+    --success: 142 72% 38%;
+    --warning: 38 92% 50%;
+    --danger: 0 72% 51%;
+    --ring: 221 64% 33%;
+    --font-current-locale: var(--font-sans);
+    color-scheme: light;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+    --background: 224 42% 8%;
+    --foreground: 210 40% 96%;
+    --surface: 223 29% 12%;
+    --surface-hover: 223 26% 16%;
+    --muted: 223 21% 18%;
+    --muted-foreground: 215 20% 73%;
+    --border: 217 19% 27%;
+    --primary: 214 88% 68%;
+    --primary-foreground: 224 42% 8%;
+    --accent: 43 78% 63%;
+    --accent-foreground: 222 47% 11%;
+    --success: 142 69% 50%;
+    --warning: 40 96% 58%;
+    --danger: 0 78% 63%;
+    --ring: 214 88% 68%;
+    color-scheme: dark;
+  }
+
+  * {
+    border-color: hsl(var(--border));
+  }
+
+  html {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    scroll-behavior: smooth;
+  }
+
+  body {
+    min-height: 100vh;
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-family: var(--font-current-locale), var(--font-sans), sans-serif;
+  }
+
+  a {
+    color: inherit;
+  }
+
+  ::selection {
+    background: hsl(var(--primary) / 0.18);
+    color: hsl(var(--foreground));
   }
 }
 
-@layer base {
-  body {
-    background-color: var(--background);
-    color: var(--foreground);
+@layer components {
+  .font-locale,
+  .font-hindi {
+    font-family: var(--font-current-locale), var(--font-sans), sans-serif;
   }
 }
 
 @layer utilities {
-  /* Global focus indicator for keyboard navigation */
   *:focus-visible {
-    outline: 2px solid #D4AF37;
+    outline: 2px solid hsl(var(--ring));
     outline-offset: 2px;
-    border-radius: 2px;
+    border-radius: 0.375rem;
+  }
+
+  /* Compatibility layer for older light-only utility usage on untouched pages/components. */
+  .dark [class~="bg-white"] {
+    background-color: hsl(var(--surface)) !important;
+  }
+
+  .dark [class~="bg-gray-50"],
+  .dark [class~="bg-gray-100"] {
+    background-color: hsl(var(--muted)) !important;
+  }
+
+  .dark [class~="text-gray-900"],
+  .dark [class~="text-gray-800"],
+  .dark [class~="text-gray-700"] {
+    color: hsl(var(--foreground)) !important;
+  }
+
+  .dark [class~="text-gray-600"],
+  .dark [class~="text-gray-500"],
+  .dark [class~="text-gray-400"] {
+    color: hsl(var(--muted-foreground)) !important;
+  }
+
+  .dark [class~="border-gray-100"],
+  .dark [class~="border-gray-200"],
+  .dark [class~="border-gray-300"] {
+    border-color: hsl(var(--border)) !important;
+  }
+
+  .dark [class~="bg-blue-50"],
+  .dark [class~="bg-indigo-50"] {
+    background-color: hsl(var(--primary) / 0.14) !important;
+  }
+
+  .dark [class~="bg-amber-50"] {
+    background-color: hsl(var(--warning) / 0.14) !important;
+  }
+
+  .dark [class~="bg-green-50"] {
+    background-color: hsl(var(--success) / 0.14) !important;
+  }
+
+  .dark [class~="bg-red-50"] {
+    background-color: hsl(var(--danger) / 0.14) !important;
+  }
+
+  .dark [class~="bg-purple-50"] {
+    background-color: hsl(270 70% 65% / 0.14) !important;
+  }
+
+  .dark [class~="border-blue-100"],
+  .dark [class~="border-blue-200"],
+  .dark [class~="border-indigo-200"] {
+    border-color: hsl(var(--primary) / 0.3) !important;
+  }
+
+  .dark [class~="border-amber-200"] {
+    border-color: hsl(var(--warning) / 0.28) !important;
+  }
+
+  .dark [class~="border-green-200"] {
+    border-color: hsl(var(--success) / 0.28) !important;
+  }
+
+  .dark [class~="border-red-200"] {
+    border-color: hsl(var(--danger) / 0.28) !important;
+  }
+
+  .dark [class~="border-purple-200"] {
+    border-color: hsl(270 70% 65% / 0.28) !important;
+  }
+
+  .dark [class~="text-amber-900"],
+  .dark [class~="text-amber-800"],
+  .dark [class~="text-amber-700"] {
+    color: hsl(var(--warning)) !important;
+  }
+
+  .dark [class~="text-green-900"],
+  .dark [class~="text-green-800"] {
+    color: hsl(var(--success)) !important;
+  }
+
+  .dark [class~="text-red-900"],
+  .dark [class~="text-red-800"],
+  .dark [class~="text-red-700"] {
+    color: hsl(var(--danger)) !important;
   }
 }

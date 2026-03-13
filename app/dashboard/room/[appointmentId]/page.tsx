@@ -3,16 +3,36 @@ import { authOptions } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import prisma from '@/lib/prisma';
 import JitsiRoomClient from './JitsiRoomClient';
+import { localizeTreeFromMemory } from '@/lib/content/localized';
+import { getRequestLocale } from '@/lib/i18n/request';
+import { withLocalePrefix } from '@/lib/i18n/navigation';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 
 export default async function VideoRoomPage(props: { params: Promise<{ appointmentId: string }> }) {
   const params = await props.params;
+  const locale = await getRequestLocale();
   const session = await getServerSession(authOptions);
 
   if (!session?.user?.id) {
-    redirect('/api/auth/signin');
+    const callbackUrl = encodeURIComponent(withLocalePrefix(`/dashboard/room/${params.appointmentId}`, locale));
+    redirect(`${withLocalePrefix('/', locale)}?callbackUrl=${callbackUrl}`);
   }
+
+  const copy = localizeTreeFromMemory({
+    roomClosedTitle: 'Room closed',
+    roomClosedBody: 'This consultation record does not exist or was removed.',
+    returnToDashboard: 'Return to dashboard',
+    accessDeniedTitle: 'Access denied',
+    accessDeniedBody: 'You are not authorized to join this conference.',
+    unavailableTitle: 'Consultation unavailable',
+    unavailableBody: 'Video rooms are only accessible for confirmed consultations.',
+    leaveRoom: 'Leave room',
+    secureVideo: 'LexIndia secure video',
+    appointmentPrefix: 'Appointment',
+    citizenFallback: 'Citizen',
+    lawyerFallback: 'Lawyer',
+  } as const, locale);
 
   const appointment = await prisma.appointment.findUnique({
     where: { id: params.appointmentId },
@@ -21,14 +41,22 @@ export default async function VideoRoomPage(props: { params: Promise<{ appointme
       citizen: true,
     },
   });
+  const dashboardHome = session.user.role === 'LAWYER'
+    ? withLocalePrefix('/dashboard/lawyer', locale)
+    : withLocalePrefix('/dashboard/citizen', locale);
 
   if (!appointment) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="bg-white p-8 rounded-2xl shadow-sm text-center">
-           <h1 className="text-2xl font-bold text-gray-900 mb-2">Room Closed</h1>
-           <p className="text-gray-500 mb-6">This consultation record does not exist or was removed.</p>
-           <Link href="/dashboard" className="text-[#1E3A8A] font-semibold hover:underline">Return to Dashboard</Link>
+      <div className="flex min-h-screen items-center justify-center bg-muted">
+        <div className="rounded-2xl border border-border bg-background p-8 text-center shadow-sm">
+          <h1 className="mb-2 text-2xl font-bold text-foreground">{copy.roomClosedTitle}</h1>
+          <p className="mb-6 text-muted-foreground">{copy.roomClosedBody}</p>
+          <Link
+            href={dashboardHome}
+            className="font-semibold text-primary transition-colors hover:text-primary/80"
+          >
+            {copy.returnToDashboard}
+          </Link>
         </div>
       </div>
     );
@@ -38,50 +66,66 @@ export default async function VideoRoomPage(props: { params: Promise<{ appointme
   const isLawyer = appointment.lawyer.userId === session.user.id;
 
   if (!isCitizen && !isLawyer) {
-     return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50">
-          <div className="bg-white p-8 rounded-2xl shadow-sm text-center">
-             <h1 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h1>
-             <p className="text-gray-500 mb-6">You are not authorized to join this conference.</p>
-             <Link href="/dashboard" className="text-[#1E3A8A] font-semibold hover:underline">Return Admin Hub</Link>
-          </div>
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-muted">
+        <div className="rounded-2xl border border-border bg-background p-8 text-center shadow-sm">
+          <h1 className="mb-2 text-2xl font-bold text-foreground">{copy.accessDeniedTitle}</h1>
+          <p className="mb-6 text-muted-foreground">{copy.accessDeniedBody}</p>
+          <Link
+            href={dashboardHome}
+            className="font-semibold text-primary transition-colors hover:text-primary/80"
+          >
+            {copy.returnToDashboard}
+          </Link>
         </div>
-      );
+      </div>
+    );
   }
 
   if (appointment.status !== 'CONFIRMED' && appointment.status !== 'COMPLETED') {
-     return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50">
-          <div className="bg-white p-8 rounded-2xl shadow-sm text-center">
-             <h1 className="text-2xl font-bold text-gray-900 mb-2">Consultation Unavailable</h1>
-             <p className="text-gray-500 mb-6">Video rooms are only accessible for confirmed consultations.</p>
-             <Link href="/dashboard" className="text-[#1E3A8A] font-semibold hover:underline">Return to Dashboard</Link>
-          </div>
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-muted">
+        <div className="rounded-2xl border border-border bg-background p-8 text-center shadow-sm">
+          <h1 className="mb-2 text-2xl font-bold text-foreground">{copy.unavailableTitle}</h1>
+          <p className="mb-6 text-muted-foreground">{copy.unavailableBody}</p>
+          <Link
+            href={dashboardHome}
+            className="font-semibold text-primary transition-colors hover:text-primary/80"
+          >
+            {copy.returnToDashboard}
+          </Link>
         </div>
-     );
+      </div>
+    );
   }
 
-  const identityName = isCitizen ? (appointment.citizen?.name || 'Citizen') : (appointment.lawyer.user?.name || 'Lawyer');
-  const returnPath = isCitizen ? '/dashboard/citizen' : '/dashboard/lawyer';
+  const identityName = isCitizen
+    ? appointment.citizen?.name || copy.citizenFallback
+    : appointment.lawyer.user?.name || copy.lawyerFallback;
+  const returnPath = isCitizen
+    ? withLocalePrefix('/dashboard/citizen', locale)
+    : withLocalePrefix('/dashboard/lawyer', locale);
   const meetingId = `LexIndia-Consultation-${appointment.id.replace(/[^a-zA-Z0-9]/g, '')}`;
 
   return (
-    <div className="min-h-screen bg-black flex flex-col">
-      <div className="p-4 flex items-center justify-between border-b border-white/10 bg-black text-white shrink-0">
-         <Link href={returnPath} className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors font-medium text-sm">
-           <ArrowLeft className="w-4 h-4" /> Leave Room
-         </Link>
-         <div className="text-center hidden sm:block">
-            <p className="text-xs text-gray-400 font-bold uppercase tracking-wide">LexIndia Secure Video</p>
-            <p className="text-sm">Appt: {appointment.id.split('-')[0]}</p>
-         </div>
-         <div className="text-sm font-semibold text-gray-300">
-            {identityName}
-         </div>
+    <div className="flex min-h-screen flex-col bg-background">
+      <div className="flex shrink-0 items-center justify-between border-b border-border bg-surface p-4 text-foreground">
+        <Link
+          href={returnPath}
+          className="flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          {copy.leaveRoom}
+        </Link>
+        <div className="hidden text-center sm:block">
+          <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">{copy.secureVideo}</p>
+          <p className="text-sm">{copy.appointmentPrefix}: {appointment.id.split('-')[0]}</p>
+        </div>
+        <div className="text-sm font-semibold text-muted-foreground">{identityName}</div>
       </div>
 
-      <div className="flex-1 w-full bg-slate-900 relative">
-        <JitsiRoomClient 
+      <div className="relative w-full flex-1 bg-surface">
+        <JitsiRoomClient
           roomName={meetingId}
           displayName={identityName}
           userEmail={session.user.email || ''}

@@ -2,60 +2,67 @@
 
 import React from 'react';
 import { Scale } from 'lucide-react';
-import Link from 'next/link';
-import { getTranslation } from '@/lib/translations';
+
+import LocaleLink from '@/components/LocaleLink';
+import { getPageFallbackContent } from '@/lib/content/page-fallbacks';
 import { useLanguage } from '@/lib/LanguageContext';
 
 export default function Footer() {
-  const { lang, isIndic } = useLanguage();
-  const t = getTranslation(lang);
+  const { fontClass, lang, t } = useLanguage();
+  const guidesLabel = getPageFallbackContent('guides', lang).title;
+  const verificationLabel = getPageFallbackContent('verifyLawyers', lang).title;
+  const disclaimerPageLabel = getPageFallbackContent('disclaimer', lang).title;
 
   return (
-    <footer className="bg-gray-900 text-gray-400 py-12">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
-          <div className="col-span-1 md:col-span-1">
-            <div className="flex items-center gap-2 mb-4">
-              <Scale className="w-6 h-6 text-[#D4AF37]" />
-              <span className="text-xl font-bold text-white tracking-tight">LexIndia</span>
+    <footer className="border-t border-border bg-surface py-12 text-muted-foreground">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="mb-8 grid grid-cols-1 gap-8 md:grid-cols-4">
+          <div className="col-span-1">
+            <div className="mb-4 flex items-center gap-2">
+              <Scale className="h-6 w-6 text-accent" />
+              <span className="text-xl font-bold tracking-tight text-foreground">LexIndia</span>
             </div>
-            <p className={`text-sm ${isIndic ? 'font-hindi' : ''}`}>{t.footer.desc}</p>
+            <p className={`text-sm ${fontClass}`}>{t.footer.desc}</p>
           </div>
+
           <div>
-            <h4 className={`text-white font-semibold mb-4 ${isIndic ? 'font-hindi' : ''}`}>{t.footer.forCitizens}</h4>
-            <ul className={`space-y-2 text-sm ${isIndic ? 'font-hindi' : ''}`}>
-              <li><Link href="/lawyers" className="hover:text-white transition-colors">{t.footer.findLawyer}</Link></li>
-              <li><Link href="/knowledge" className="hover:text-white transition-colors">{t.footer.knowledge}</Link></li>
-              <li><Link href="/guides" className="hover:text-white transition-colors">Legal Guides</Link></li>
-              <li><Link href="/templates" className="hover:text-white transition-colors">{t.footer.templates}</Link></li>
-              <li><Link href="/rights" className="hover:text-white transition-colors">{t.footer.rights}</Link></li>
+            <h4 className={`mb-4 font-semibold text-foreground ${fontClass}`}>{t.footer.forCitizens}</h4>
+            <ul className={`space-y-2 text-sm ${fontClass}`}>
+              <li><LocaleLink href="/lawyers" className="transition-colors hover:text-foreground">{t.footer.findLawyer}</LocaleLink></li>
+              <li><LocaleLink href="/knowledge" className="transition-colors hover:text-foreground">{t.footer.knowledge}</LocaleLink></li>
+              <li><LocaleLink href="/guides" className="transition-colors hover:text-foreground">{guidesLabel}</LocaleLink></li>
+              <li><LocaleLink href="/templates" className="transition-colors hover:text-foreground">{t.footer.templates}</LocaleLink></li>
+              <li><LocaleLink href="/rights" className="transition-colors hover:text-foreground">{t.footer.rights}</LocaleLink></li>
             </ul>
           </div>
+
           <div>
-            <h4 className={`text-white font-semibold mb-4 ${isIndic ? 'font-hindi' : ''}`}>{t.footer.forLawyers}</h4>
-            <ul className={`space-y-2 text-sm ${isIndic ? 'font-hindi' : ''}`}>
-              <li><Link href="/for-lawyers" className="hover:text-white transition-colors">{t.footer.joinDir}</Link></li>
-              <li><Link href="/dashboard/lawyer" className="hover:text-white transition-colors">{t.footer.dashboard}</Link></li>
-              <li><Link href="/pricing" className="hover:text-white transition-colors">{t.footer.pricing}</Link></li>
+            <h4 className={`mb-4 font-semibold text-foreground ${fontClass}`}>{t.footer.forLawyers}</h4>
+            <ul className={`space-y-2 text-sm ${fontClass}`}>
+              <li><LocaleLink href="/pricing" className="transition-colors hover:text-foreground">{t.footer.pricing}</LocaleLink></li>
+              <li><LocaleLink href="/dashboard/lawyer" className="transition-colors hover:text-foreground">{t.footer.dashboard}</LocaleLink></li>
             </ul>
           </div>
+
           <div>
-            <h4 className={`text-white font-semibold mb-4 ${isIndic ? 'font-hindi' : ''}`}>{t.footer.company}</h4>
-            <ul className={`space-y-2 text-sm ${isIndic ? 'font-hindi' : ''}`}>
-              <li><Link href="/about" className="hover:text-white transition-colors">{t.footer.about}</Link></li>
-              <li><Link href="/contact" className="hover:text-white transition-colors">{t.footer.contact}</Link></li>
-              <li><Link href="/verify-lawyers" className="hover:text-white transition-colors">Verification Policy</Link></li>
-              <li><Link href="/privacy" className="hover:text-white transition-colors">{t.footer.privacy}</Link></li>
-              <li><Link href="/terms" className="hover:text-white transition-colors">{t.footer.terms}</Link></li>
-              <li><Link href="/disclaimer" className="hover:text-white transition-colors">Disclaimer</Link></li>
+            <h4 className={`mb-4 font-semibold text-foreground ${fontClass}`}>{t.footer.company}</h4>
+            <ul className={`space-y-2 text-sm ${fontClass}`}>
+              <li><LocaleLink href="/about" className="transition-colors hover:text-foreground">{t.footer.about}</LocaleLink></li>
+              <li><LocaleLink href="/contact" className="transition-colors hover:text-foreground">{t.footer.contact}</LocaleLink></li>
+              <li><LocaleLink href="/verify-lawyers" className="transition-colors hover:text-foreground">{verificationLabel}</LocaleLink></li>
+              <li><LocaleLink href="/privacy" className="transition-colors hover:text-foreground">{t.footer.privacy}</LocaleLink></li>
+              <li><LocaleLink href="/terms" className="transition-colors hover:text-foreground">{t.footer.terms}</LocaleLink></li>
+              <li><LocaleLink href="/disclaimer" className="transition-colors hover:text-foreground">{disclaimerPageLabel}</LocaleLink></li>
             </ul>
           </div>
         </div>
-        <div className="border-t border-gray-800 pt-8 flex flex-col md:flex-row justify-between items-center text-sm">
-          <p className={isIndic ? 'font-hindi' : ''}>&copy; {new Date().getFullYear()} LexIndia. {t.footer.rightsRes}</p>
-          <div className="mt-4 md:mt-0 text-xs max-w-xl text-center md:text-right space-y-2">
 
-            <p className="text-gray-500">
+        <div className="flex flex-col items-center justify-between gap-4 border-t border-border pt-8 text-sm md:flex-row">
+          <p className={fontClass}>
+            &copy; {new Date().getFullYear()} LexIndia. {t.footer.rightsRes}
+          </p>
+          <div className="max-w-xl space-y-2 text-center text-xs md:text-right">
+            <p>
               <strong>{t.footer.disclaimer}</strong>
             </p>
           </div>

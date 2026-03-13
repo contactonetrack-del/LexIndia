@@ -1,9 +1,11 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Star, ChevronLeft, ChevronRight, Quote } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Quote, Star } from 'lucide-react';
 import Image from 'next/image';
+
+import { useLanguage } from '@/lib/LanguageContext';
 
 const testimonials = [
   {
@@ -11,7 +13,7 @@ const testimonials = [
     name: 'Rajesh Kumar',
     role: 'Small Business Owner, Delhi',
     image: 'https://i.pravatar.cc/150?img=11',
-    text: 'LexIndia made finding a trusted corporate lawyer so simple. The transparent fee structure and verified profiles gave me the confidence I needed to handle my contract disputes.',
+    text: 'LexIndia made finding a trusted corporate lawyer simple. The fee visibility and verified profiles gave me confidence immediately.',
     rating: 5,
   },
   {
@@ -19,7 +21,7 @@ const testimonials = [
     name: 'Priya Sharma',
     role: 'Tenant, Mumbai',
     image: 'https://i.pravatar.cc/150?img=5',
-    text: 'I was facing an illegal eviction. Through LexIndia, I booked a consultation within minutes. The lawyer guided me perfectly using the Rent Control Act. Highly recommended!',
+    text: 'I booked a consultation within minutes and got practical guidance for an eviction issue without wasting time.',
     rating: 5,
   },
   {
@@ -27,7 +29,7 @@ const testimonials = [
     name: 'Vikram Singh',
     role: 'Software Engineer, Bangalore',
     image: 'https://i.pravatar.cc/150?img=59',
-    text: 'The legal guides are incredibly detailed. Before even speaking to a lawyer, I understood my rights entirely. The UI is completely frictionless and modern.',
+    text: 'The platform helped me understand my options before I ever spoke with a lawyer.',
     rating: 4,
   },
   {
@@ -35,22 +37,33 @@ const testimonials = [
     name: 'Anjali Desai',
     role: 'Homebuyer, Pune',
     image: 'https://i.pravatar.cc/150?img=44',
-    text: 'Used the platform to find a property lawyer for my flat registration. The entire process was seamless. No hidden fees, no unprofessional behavior. Top notch service.',
+    text: 'The experience felt clear and professional from search to booking.',
     rating: 5,
   },
 ];
 
+const heading = 'Real stories, real outcomes';
+const subheading =
+  'Feedback from people who used LexIndia to move faster and make clearer legal decisions.';
+const previousLabel = 'Previous testimonial';
+const nextLabel = 'Next testimonial';
+
 export function TestimonialsCarousel() {
+  const { lang } = useLanguage();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
 
   useEffect(() => {
-    if (isHovered) return;
+    if (isHovered || lang !== 'en') return;
     const timer = setInterval(() => {
       setCurrentIndex((current) => (current + 1) % testimonials.length);
     }, 5000);
     return () => clearInterval(timer);
-  }, [isHovered]);
+  }, [isHovered, lang]);
+
+  if (lang !== 'en') {
+    return null;
+  }
 
   const handleNext = () => {
     setCurrentIndex((current) => (current + 1) % testimonials.length);
@@ -61,54 +74,53 @@ export function TestimonialsCarousel() {
   };
 
   return (
-    <section className="py-24 bg-white overflow-hidden relative">
-      {/* Background decoration */}
-      <div className="absolute top-0 right-0 -mr-20 -mt-20 w-64 h-64 bg-blue-50 rounded-full blur-3xl opacity-50"></div>
-      <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-64 h-64 bg-yellow-50 rounded-full blur-3xl opacity-50"></div>
+    <section className="relative overflow-hidden bg-background py-24">
+      <div className="absolute right-0 top-0 -mr-20 -mt-20 h-64 w-64 rounded-full bg-primary/10 blur-3xl opacity-50" />
+      <div className="absolute bottom-0 left-0 -mb-20 -ml-20 h-64 w-64 rounded-full bg-accent/10 blur-3xl opacity-50" />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        <div className="text-center mb-16">
-          <motion.h2 
+      <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="mb-16 text-center">
+          <motion.h2
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="text-3xl font-bold text-gray-900 mb-4"
+            className="mb-4 text-3xl font-bold text-foreground"
           >
-            Real Stories, Real Justice
+            {heading}
           </motion.h2>
-          <motion.p 
+          <motion.p
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ delay: 0.1 }}
-            className="text-lg text-gray-600 max-w-2xl mx-auto"
+            className="mx-auto max-w-2xl text-lg text-muted-foreground"
           >
-            Don&apos;t just take our word for it. Hear from Indians who found the right legal help exactly when they needed it.
+            {subheading}
           </motion.p>
         </div>
 
-        <div 
-          className="max-w-4xl mx-auto relative"
+        <div
+          className="relative mx-auto max-w-4xl"
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
         >
-          <div className="absolute top-1/2 -left-4 md:-left-12 -translate-y-1/2 z-20">
-            <button 
+          <div className="absolute top-1/2 z-20 -translate-y-1/2 md:-left-12 -left-4">
+            <button
               onClick={handlePrev}
-              className="w-10 h-10 rounded-full bg-white shadow-lg border border-gray-100 flex items-center justify-center text-gray-600 hover:text-[#1E3A8A] hover:scale-110 transition-all focus:outline-none"
-              aria-label="Previous testimonial"
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-surface text-muted-foreground shadow-lg transition-all hover:scale-110 hover:text-primary focus:outline-none"
+              aria-label={previousLabel}
             >
-              <ChevronLeft className="w-6 h-6" />
+              <ChevronLeft className="h-6 w-6" />
             </button>
           </div>
 
-          <div className="absolute top-1/2 -right-4 md:-right-12 -translate-y-1/2 z-20">
-            <button 
+          <div className="absolute top-1/2 z-20 -right-4 -translate-y-1/2 md:-right-12">
+            <button
               onClick={handleNext}
-              className="w-10 h-10 rounded-full bg-white shadow-lg border border-gray-100 flex items-center justify-center text-gray-600 hover:text-[#1E3A8A] hover:scale-110 transition-all focus:outline-none"
-              aria-label="Next testimonial"
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-surface text-muted-foreground shadow-lg transition-all hover:scale-110 hover:text-primary focus:outline-none"
+              aria-label={nextLabel}
             >
-              <ChevronRight className="w-6 h-6" />
+              <ChevronRight className="h-6 w-6" />
             </button>
           </div>
 
@@ -119,14 +131,14 @@ export function TestimonialsCarousel() {
                 initial={{ opacity: 0, x: 50 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -50 }}
-                transition={{ duration: 0.4, ease: "easeInOut" }}
-                className="absolute inset-0 bg-gray-50 rounded-3xl p-8 md:p-12 border border-gray-100 shadow-sm flex flex-col md:flex-row items-center gap-8"
+                transition={{ duration: 0.4, ease: 'easeInOut' }}
+                className="absolute inset-0 flex flex-col items-center gap-8 rounded-3xl border border-border bg-surface p-8 shadow-sm md:flex-row md:p-12"
               >
-                <div className="flex-shrink-0 relative">
-                  <Quote className="absolute -top-4 -left-4 w-10 h-10 text-[#D4AF37] opacity-50 z-0" />
-                  <div className="w-24 h-24 md:w-32 md:h-32 rounded-full overflow-hidden border-4 border-white shadow-md relative z-10">
-                    <Image 
-                      src={testimonials[currentIndex].image} 
+                <div className="relative flex-shrink-0">
+                  <Quote className="absolute -left-4 -top-4 z-0 h-10 w-10 text-accent/60" />
+                  <div className="relative z-10 h-24 w-24 overflow-hidden rounded-full border-4 border-background shadow-md md:h-32 md:w-32">
+                    <Image
+                      src={testimonials[currentIndex].image}
                       alt={testimonials[currentIndex].name}
                       fill
                       className="object-cover"
@@ -134,37 +146,37 @@ export function TestimonialsCarousel() {
                     />
                   </div>
                 </div>
-                
+
                 <div className="flex-1 text-center md:text-left">
-                  <div className="flex justify-center md:justify-start gap-1 mb-4">
-                    {[...Array(5)].map((_, i) => (
-                      <Star 
-                        key={i} 
-                        className={`w-5 h-5 ${i < testimonials[currentIndex].rating ? 'text-[#D4AF37] fill-[#D4AF37]' : 'text-gray-300'}`} 
+                  <div className="mb-4 flex justify-center gap-1 md:justify-start">
+                    {[...Array(5)].map((_, index) => (
+                      <Star
+                        key={index}
+                        className={`h-5 w-5 ${index < testimonials[currentIndex].rating ? 'fill-accent text-accent' : 'text-border'}`}
                       />
                     ))}
                   </div>
-                  <p className="text-lg md:text-xl text-gray-700 font-medium italic mb-6">
+                  <p className="mb-6 text-lg font-medium italic text-foreground md:text-xl">
                     &quot;{testimonials[currentIndex].text}&quot;
                   </p>
                   <div>
-                    <h4 className="font-bold text-gray-900 text-lg">{testimonials[currentIndex].name}</h4>
-                    <p className="text-sm text-gray-500">{testimonials[currentIndex].role}</p>
+                    <h4 className="text-lg font-bold text-foreground">{testimonials[currentIndex].name}</h4>
+                    <p className="text-sm text-muted-foreground">{testimonials[currentIndex].role}</p>
                   </div>
                 </div>
               </motion.div>
             </AnimatePresence>
           </div>
-          
-          <div className="flex justify-center gap-2 mt-8">
-            {testimonials.map((_, idx) => (
+
+          <div className="mt-8 flex justify-center gap-2">
+            {testimonials.map((testimonial, index) => (
               <button
-                key={idx}
-                onClick={() => setCurrentIndex(idx)}
-                className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${
-                  idx === currentIndex ? 'bg-[#1E3A8A] w-6' : 'bg-gray-300 hover:bg-gray-400'
+                key={testimonial.id}
+                onClick={() => setCurrentIndex(index)}
+                className={`h-2.5 rounded-full transition-all duration-300 ${
+                  index === currentIndex ? 'w-6 bg-primary' : 'w-2.5 bg-border hover:bg-muted-foreground'
                 }`}
-                aria-label={`Go to slide ${idx + 1}`}
+                aria-label={`Go to slide ${index + 1}`}
               />
             ))}
           </div>

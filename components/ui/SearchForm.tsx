@@ -4,9 +4,20 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Search, MapPin } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useRouter } from 'next/navigation';
+import { localizeTreeFromMemory } from '@/lib/content/localized';
+import { useLanguage } from '@/lib/LanguageContext';
+import { localizeHref } from '@/lib/i18n/navigation';
+import type { Translation } from '@/lib/translations';
 
-export function SearchForm({ t, isIndic }: { t: any, isIndic: boolean }) {
+export function SearchForm({ t }: { t: Translation }) {
   const router = useRouter();
+  const { lang, fontClass } = useLanguage();
+  const copy = localizeTreeFromMemory(
+    {
+      popularSearchesLabel: 'Popular Searches:',
+    } as const,
+    lang
+  );
   const [searchLaw, setSearchLaw] = useState('');
   const [searchCity, setSearchCity] = useState('');
   
@@ -17,16 +28,34 @@ export function SearchForm({ t, isIndic }: { t: any, isIndic: boolean }) {
   const cityRef = useRef<HTMLDivElement>(null);
 
   const legalSpecializations = [
-    'Criminal Lawyer', 'Family Lawyer', 'Corporate Lawyer', 'Property Lawyer',
-    'Civil Lawyer', 'Cyber Crime', 'Divorce & Customary', 'Taxation', 'Immigration', 'Labor & Employment'
+    { query: 'Criminal Law', label: t.categories.c1 },
+    { query: 'Family Law', label: t.categories.c2 },
+    { query: 'Property Law', label: t.categories.c3 },
+    { query: 'Corporate Law', label: t.categories.c4 },
+    { query: 'Civil Law', label: t.categories.c5 },
+    { query: 'Cyber Law', label: t.categories.c6 },
   ];
 
   const cities = [
     'Delhi', 'Mumbai', 'Bangalore', 'Hyderabad', 'Pune', 'Chennai', 'Kolkata', 'Ahmedabad', 'Jaipur', 'Lucknow'
   ];
+  const quickSearches = [
+    { query: 'Criminal Law', label: t.categories.c1 },
+    { query: 'Family Law', label: t.categories.c2 },
+    { query: 'Property Law', label: t.categories.c3 },
+  ];
 
-  const filteredLaw = legalSpecializations.filter(s => s.toLowerCase().includes(searchLaw.toLowerCase()));
+  const filteredLaw = legalSpecializations.filter((entry) =>
+    entry.label.toLowerCase().includes(searchLaw.toLowerCase())
+  );
   const filteredCity = cities.filter(c => c.toLowerCase().includes(searchCity.toLowerCase()));
+
+  const resolveSearchQuery = (value: string) =>
+    legalSpecializations.find(
+      (entry) =>
+        entry.label.toLowerCase() === value.toLowerCase() ||
+        entry.query.toLowerCase() === value.toLowerCase()
+    )?.query ?? value;
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -39,13 +68,13 @@ export function SearchForm({ t, isIndic }: { t: any, isIndic: boolean }) {
 
   const handleSearch = () => {
     const params = new URLSearchParams();
-    if (searchLaw) params.append('q', searchLaw);
+    if (searchLaw) params.append('q', resolveSearchQuery(searchLaw));
     if (searchCity) params.append('loc', searchCity);
-    router.push(`/lawyers?${params.toString()}`);
+    router.push(localizeHref(`/lawyers?${params.toString()}`, lang));
   };
 
   const executeQuickSearch = (query: string) => {
-    router.push(`/lawyers?q=${encodeURIComponent(query)}`);
+    router.push(localizeHref(`/lawyers?q=${encodeURIComponent(query)}`, lang));
   };
 
   return (
@@ -55,11 +84,11 @@ export function SearchForm({ t, isIndic }: { t: any, isIndic: boolean }) {
       transition={{ duration: 0.5, delay: 0.2 }}
       className="max-w-4xl mx-auto w-full mb-10"
     >
-      <div className="bg-white/10 backdrop-blur-md p-2 rounded-2xl border border-white/20 shadow-2xl flex flex-col sm:flex-row gap-2 mb-4">
+      <div className="bg-primary/10 backdrop-blur-md p-2 rounded-2xl border border-primary-foreground/25 shadow-2xl flex flex-col sm:flex-row gap-2 mb-4">
         {/* Specialization Autocomplete */}
         <div ref={lawRef} className="relative flex-1">
-          <div className="flex items-center px-4 bg-white dark:bg-gray-900 rounded-xl border-2 border-transparent focus-within:border-[#D4AF37] dark:focus-within:border-[#D4AF37] transition-all h-14">
-            <Search className="w-5 h-5 text-gray-400 dark:text-gray-500" />
+          <div className="flex h-14 items-center rounded-xl border-2 border-transparent bg-background px-4 transition-all focus-within:border-accent">
+            <Search className="w-5 h-5 text-muted-foreground" />
             <input
               type="text"
               value={searchLaw}
@@ -67,22 +96,22 @@ export function SearchForm({ t, isIndic }: { t: any, isIndic: boolean }) {
               onFocus={() => setShowLawDropdown(true)}
               onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
               placeholder={t.hero.searchLaw}
-              className={`w-full bg-transparent border-none focus:ring-0 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 py-3 px-3 outline-none ${isIndic ? 'font-hindi' : ''}`}
+              className={`w-full bg-transparent border-none px-3 py-3 text-foreground outline-none placeholder:text-muted-foreground focus:ring-0 ${fontClass}`}
             />
           </div>
           <AnimatePresence>
             {showLawDropdown && filteredLaw.length > 0 && (
               <motion.div 
                 initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
-                className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-50 py-2 max-h-60 overflow-y-auto"
+                className="absolute top-full left-0 right-0 z-50 mt-2 max-h-60 overflow-y-auto overflow-hidden rounded-xl border border-border bg-background py-2 shadow-xl"
               >
-                {filteredLaw.map(item => (
+                {filteredLaw.map((item) => (
                   <button
-                    key={item}
-                    onClick={() => { setSearchLaw(item); setShowLawDropdown(false); }}
-                    className="w-full text-left px-5 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-200 transition-colors border-b border-gray-50 dark:border-gray-800 last:border-0"
+                    key={item.query}
+                    onClick={() => { setSearchLaw(item.label); setShowLawDropdown(false); }}
+                    className="w-full border-b border-border px-5 py-3 text-left text-muted-foreground transition-colors last:border-0 hover:bg-surface-hover hover:text-foreground"
                   >
-                    {item}
+                    {item.label}
                   </button>
                 ))}
               </motion.div>
@@ -92,8 +121,8 @@ export function SearchForm({ t, isIndic }: { t: any, isIndic: boolean }) {
 
         {/* City Autocomplete */}
         <div ref={cityRef} className="relative flex-1">
-          <div className="flex items-center px-4 bg-white dark:bg-gray-900 rounded-xl border-2 border-transparent focus-within:border-[#D4AF37] dark:focus-within:border-[#D4AF37] transition-all h-14">
-            <MapPin className="w-5 h-5 text-gray-400 dark:text-gray-500" />
+          <div className="flex h-14 items-center rounded-xl border-2 border-transparent bg-background px-4 transition-all focus-within:border-accent">
+            <MapPin className="w-5 h-5 text-muted-foreground" />
             <input
               type="text"
               value={searchCity}
@@ -101,20 +130,20 @@ export function SearchForm({ t, isIndic }: { t: any, isIndic: boolean }) {
               onFocus={() => setShowCityDropdown(true)}
               onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
               placeholder={t.hero.searchCity}
-              className={`w-full bg-transparent border-none focus:ring-0 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 py-3 px-3 outline-none ${isIndic ? 'font-hindi' : ''}`}
+              className={`w-full bg-transparent border-none px-3 py-3 text-foreground outline-none placeholder:text-muted-foreground focus:ring-0 ${fontClass}`}
             />
           </div>
           <AnimatePresence>
             {showCityDropdown && filteredCity.length > 0 && (
               <motion.div 
                 initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
-                className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-900 rounded-xl shadow-xl border border-gray-100 dark:border-gray-800 overflow-hidden z-50 py-2 max-h-60 overflow-y-auto"
+                className="absolute top-full left-0 right-0 mt-2 bg-background rounded-xl shadow-xl border border-border overflow-hidden z-50 py-2 max-h-60 overflow-y-auto"
               >
                 {filteredCity.map(item => (
                   <button
                     key={item}
                     onClick={() => { setSearchCity(item); setShowCityDropdown(false); }}
-                    className="w-full text-left px-5 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-200 transition-colors border-b border-gray-50 dark:border-gray-800 last:border-0"
+                    className="w-full border-b border-border px-5 py-3 text-left text-muted-foreground transition-colors last:border-0 hover:bg-surface-hover hover:text-foreground"
                   >
                     {item}
                   </button>
@@ -124,17 +153,22 @@ export function SearchForm({ t, isIndic }: { t: any, isIndic: boolean }) {
           </AnimatePresence>
         </div>
 
-        <button onClick={handleSearch} className={`h-14 bg-[#D4AF37] text-gray-900 font-bold px-8 rounded-xl hover:bg-yellow-500 transition-colors whitespace-nowrap flex items-center justify-center shadow-lg ${isIndic ? 'font-hindi' : ''}`}>
+        <button onClick={handleSearch} className={`flex h-14 items-center justify-center whitespace-nowrap rounded-xl bg-accent px-8 font-bold text-accent-foreground shadow-lg transition-colors hover:opacity-90 ${fontClass}`}>
           {t.hero.searchBtn}
         </button>
       </div>
 
-      {/* Popular Searches */}
-      <div className="text-sm text-blue-100 flex flex-wrap items-center justify-center sm:justify-start gap-3 px-2">
-        <span className="opacity-80">Popular Searches:</span>
-        <button onClick={() => executeQuickSearch('Criminal')} className="hover:text-white bg-white/10 px-3 py-1 rounded-full border border-white/20 transition-colors backdrop-blur-sm">Criminal Defense</button>
-        <button onClick={() => executeQuickSearch('Divorce')} className="hover:text-white bg-white/10 px-3 py-1 rounded-full border border-white/20 transition-colors backdrop-blur-sm">Divorce filing</button>
-        <button onClick={() => executeQuickSearch('Property')} className="hover:text-white bg-white/10 px-3 py-1 rounded-full border border-white/20 transition-colors backdrop-blur-sm">Property Registration</button>
+      <div className={`flex flex-wrap items-center justify-center gap-3 px-2 text-sm text-primary-foreground/80 sm:justify-start ${fontClass}`}>
+        <span className="opacity-80">{copy.popularSearchesLabel}</span>
+        {quickSearches.map((item) => (
+          <button
+            key={item.query}
+            onClick={() => executeQuickSearch(item.query)}
+            className="rounded-full border border-primary-foreground/25 bg-primary-foreground/10 px-3 py-1 transition-colors hover:text-primary-foreground"
+          >
+            {item.label}
+          </button>
+        ))}
       </div>
     </motion.div>
   );

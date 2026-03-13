@@ -1,21 +1,26 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
+
 import { authOptions } from '@/lib/auth';
+import { getApiLocalizedText } from '@/lib/i18n/api';
 import prisma from '@/lib/prisma';
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
 
     if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: getApiLocalizedText(request, 'Unauthorized') }, { status: 401 });
     }
 
     const body = await request.json();
     const { appointmentId, rating, comment } = body;
 
     if (!appointmentId || !rating || rating < 1 || rating > 5) {
-      return NextResponse.json({ error: 'Missing or invalid fields' }, { status: 400 });
+      return NextResponse.json(
+        { error: getApiLocalizedText(request, 'Missing or invalid fields') },
+        { status: 400 }
+      );
     }
 
     // Verify appointment exists and belongs to user
@@ -27,15 +32,21 @@ export async function POST(request: Request) {
     });
 
     if (!appointment) {
-      return NextResponse.json({ error: 'Appointment not found' }, { status: 404 });
+      return NextResponse.json({ error: getApiLocalizedText(request, 'Appointment not found') }, { status: 404 });
     }
 
     if (appointment.citizenId !== session.user.id) {
-        return NextResponse.json({ error: 'Unauthorized attempt to review' }, { status: 403 });
+        return NextResponse.json(
+          { error: getApiLocalizedText(request, 'Unauthorized attempt to review') },
+          { status: 403 }
+        );
     }
 
     if (appointment.status !== 'COMPLETED') {
-        return NextResponse.json({ error: 'Cannot review an incomplete appointment' }, { status: 400 });
+        return NextResponse.json(
+          { error: getApiLocalizedText(request, 'Cannot review an incomplete appointment') },
+          { status: 400 }
+        );
     }
 
     // Ensure they haven't reviewed this already
@@ -44,7 +55,10 @@ export async function POST(request: Request) {
     });
 
     if (existingReview) {
-       return NextResponse.json({ error: 'Review already exists for this appointment' }, { status: 400 });
+       return NextResponse.json(
+         { error: getApiLocalizedText(request, 'Review already exists for this appointment') },
+         { status: 400 }
+       );
     }
 
     // Run review creation and aggregate recalculation in a transaction wrapper
@@ -85,7 +99,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('Error creating review:', error);
     return NextResponse.json(
-      { error: 'Failed to submit review' },
+      { error: getApiLocalizedText(request, 'Failed to submit review') },
       { status: 500 }
     );
   }

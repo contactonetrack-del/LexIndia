@@ -1,103 +1,173 @@
-import { NextRequest, NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
-import { rateLimit, getClientIp } from "@/lib/rateLimit";
+import { NextRequest, NextResponse } from 'next/server';
 
-// 30 requests per minute per IP
+import { getApiLocale, getApiLocalizedText } from '@/lib/i18n/api';
+import { localizeNamedEntity } from '@/lib/i18n/db';
+import prisma from '@/lib/prisma';
+import { rateLimit, getClientIp } from '@/lib/rateLimit';
+
 const LAWYERS_LIMIT = { limit: 30, windowSecs: 60 };
 
 export async function GET(req: NextRequest) {
-    // Rate limiting
-    const ip = getClientIp(req);
-    const rl = rateLimit(`lawyers:${ip}`, LAWYERS_LIMIT);
-    if (!rl.success) {
-        return NextResponse.json(
-            { error: "Too many requests. Please slow down." },
-            { status: 429, headers: { "Retry-After": String(Math.ceil((rl.resetAt - Date.now()) / 1000)) } }
-        );
-    }
+  const locale = getApiLocale(req);
+  const ip = getClientIp(req);
+  const rl = rateLimit(`lawyers:${ip}`, LAWYERS_LIMIT);
 
-    try {
+  if (!rl.success) {
+    return NextResponse.json(
+      { error: getApiLocalizedText(req, 'Too many requests. Please slow down.') },
+      { status: 429, headers: { 'Retry-After': String(Math.ceil((rl.resetAt - Date.now()) / 1000)) } }
+    );
+  }
 
-        const { searchParams } = new URL(req.url);
-        const search = searchParams.get("search") || "";
-        const city = searchParams.get("city") || "";
-        const specialization = searchParams.get("specialization") || "";
-        const minRating = parseFloat(searchParams.get("minRating") || "0");
-        const minExp = parseInt(searchParams.get("minExp") || "0");
-        const maxFee = parseFloat(searchParams.get("maxFee") || "999999");
-        const language = searchParams.get("language") || "";
-        const verified = searchParams.get("verified") === "true" ? true : undefined;
+  try {
+    const { searchParams } = new URL(req.url);
+    const search = searchParams.get('search') || '';
+    const city = searchParams.get('city') || '';
+    const specialization = searchParams.get('specialization') || '';
+    const minRating = parseFloat(searchParams.get('minRating') || '0');
+    const minExp = parseInt(searchParams.get('minExp') || '0', 10);
+    const maxFee = parseFloat(searchParams.get('maxFee') || '999999');
+    const language = searchParams.get('language') || '';
+    const verified = searchParams.get('verified') === 'true' ? true : undefined;
 
-        const lawyers = await prisma.lawyerProfile.findMany({
-            where: {
-                AND: [
-                    city ? { city: { contains: city } } : {},
-                    minRating > 0 ? { rating: { gte: minRating } } : {},
-                    minExp > 0 ? { experienceYears: { gte: minExp } } : {},
-                    maxFee < 999999 ? { consultationFee: { lte: maxFee } } : {},
-                    verified !== undefined ? { isVerified: verified } : {},
-                    specialization
-                        ? {
-                            specializations: {
-                                some: { name: { contains: specialization } },
+    const lawyers = await (prisma.lawyerProfile as any).findMany({
+      where: {
+        AND: [
+          city ? { city: { contains: city, mode: 'insensitive' } } : {},
+          minRating > 0 ? { rating: { gte: minRating } } : {},
+          minExp > 0 ? { experienceYears: { gte: minExp } } : {},
+          maxFee < 999999 ? { consultationFee: { lte: maxFee } } : {},
+          verified !== undefined ? { isVerified: verified } : {},
+          specialization
+            ? {
+                specializations: {
+                  some: {
+                    OR: [
+                      { name: { contains: specialization, mode: 'insensitive' } },
+                      {
+                        translations: {
+                          some: {
+                            locale,
+                            name: { contains: specialization, mode: 'insensitive' },
+                          },
+                        },
+                      },
+                    ],
+                  },
+                },
+              }
+            : {},
+          language
+            ? {
+                languages: {
+                  some: {
+                    OR: [
+                      { name: { contains: language, mode: 'insensitive' } },
+                      {
+                        translations: {
+                          some: {
+                            locale,
+                            name: { contains: language, mode: 'insensitive' },
+                          },
+                        },
+                      },
+                    ],
+                  },
+                },
+              }
+            : {},
+          search
+            ? {
+                OR: [
+                  { user: { name: { contains: search, mode: 'insensitive' } } },
+                  { city: { contains: search, mode: 'insensitive' } },
+                  {
+                    specializations: {
+                      some: {
+                        OR: [
+                          { name: { contains: search, mode: 'insensitive' } },
+                          {
+                            translations: {
+                              some: {
+                                locale,
+                                name: { contains: search, mode: 'insensitive' },
+                              },
                             },
-                        }
-                        : {},
-                    language
-                        ? { languages: { some: { name: { contains: language } } } }
-                        : {},
-                    search
-                        ? {
-                            OR: [
-                                { user: { name: { contains: search } } },
-                                { city: { contains: search } },
-                                {
-                                    specializations: {
-                                        some: { name: { contains: search } },
-                                    },
-                                },
-                            ],
-                        }
-                        : {},
+                          },
+                        ],
+                      },
+                    },
+                  },
+                  {
+                    languages: {
+                      some: {
+                        OR: [
+                          { name: { contains: search, mode: 'insensitive' } },
+                          {
+                            translations: {
+                              some: {
+                                locale,
+                                name: { contains: search, mode: 'insensitive' },
+                              },
+                            },
+                          },
+                        ],
+                      },
+                    },
+                  },
                 ],
-            },
-            include: {
-                user: { select: { name: true, image: true, email: true } },
-                languages: true,
-                specializations: true,
-                modes: true,
-            },
-            // Initial sorting by rating to ensure secondary fallback is optimized
-            orderBy: { rating: "desc" },
-        });
+              }
+            : {},
+        ],
+      },
+      include: {
+        user: { select: { name: true, image: true, email: true } },
+        languages: {
+          include: {
+            translations: true,
+          },
+        },
+        specializations: {
+          include: {
+            translations: true,
+          },
+        },
+        modes: true,
+      },
+      orderBy: { rating: 'desc' },
+    });
 
-        // Artificially float Elite and Pro subscribers to the top
-        const tierWeights: Record<string, number> = {
-            'ELITE': 3,
-            'PRO': 2,
-            'BASIC': 1
-        };
+    const tierWeights: Record<string, number> = {
+      ELITE: 3,
+      PRO: 2,
+      BASIC: 1,
+    };
 
-        const sortedLawyers = lawyers.sort((a, b) => {
-            const tierA = (a as any).subscriptionTier || 'BASIC';
-            const tierB = (b as any).subscriptionTier || 'BASIC';
-            const weightA = tierWeights[tierA] || 1;
-            const weightB = tierWeights[tierB] || 1;
-            
-            if (weightA !== weightB) {
-                return weightB - weightA; // Higher weight comes first
-            }
-            
-            // Tie-breaker: rating
-            return b.rating - a.rating;
-        });
+    const sortedLawyers = lawyers
+      .map((lawyer: any) => ({
+        ...lawyer,
+        languages: lawyer.languages.map((entry: any) => localizeNamedEntity(entry, locale)),
+        specializations: lawyer.specializations.map((entry: any) => localizeNamedEntity(entry, locale)),
+      }))
+      .sort((a: any, b: any) => {
+        const tierA = (a as any).subscriptionTier || 'BASIC';
+        const tierB = (b as any).subscriptionTier || 'BASIC';
+        const weightA = tierWeights[tierA] || 1;
+        const weightB = tierWeights[tierB] || 1;
 
-        return NextResponse.json({ lawyers: sortedLawyers, total: sortedLawyers.length });
-    } catch (error) {
-        console.error("Lawyers API error:", error);
-        return NextResponse.json(
-            { error: "Failed to fetch lawyers" },
-            { status: 500 }
-        );
-    }
+        if (weightA !== weightB) {
+          return weightB - weightA;
+        }
+
+        return b.rating - a.rating;
+      });
+
+    return NextResponse.json({ lawyers: sortedLawyers, total: sortedLawyers.length });
+  } catch (error) {
+    console.error('Lawyers API error:', error);
+    return NextResponse.json(
+      { error: getApiLocalizedText(req, 'Failed to fetch lawyers') },
+      { status: 500 }
+    );
+  }
 }

@@ -4,6 +4,8 @@ import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { sendBookingEmails } from '@/lib/email';
 import Razorpay from 'razorpay';
+import { getApiLocale, getApiLocalizedText } from '@/lib/i18n/api';
+import { localizeNamedEntity } from '@/lib/i18n/db';
 
 // ============================================================
 // POST /api/appointments  — create a new appointment
@@ -13,38 +15,44 @@ import Razorpay from 'razorpay';
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
+    return NextResponse.json({ error: getApiLocalizedText(req, 'Authentication required.') }, { status: 401 });
   }
 
   let body: { lawyerId?: unknown; date?: unknown; mode?: unknown; notes?: unknown };
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 });
+    return NextResponse.json({ error: getApiLocalizedText(req, 'Invalid request body.') }, { status: 400 });
   }
 
   // Validate
   const { lawyerId, date, mode, notes } = body;
 
   if (typeof lawyerId !== 'string' || !lawyerId.trim()) {
-    return NextResponse.json({ error: 'lawyerId is required.' }, { status: 400 });
+    return NextResponse.json({ error: getApiLocalizedText(req, 'lawyerId is required.') }, { status: 400 });
   }
   if (typeof date !== 'string' || !date.trim()) {
-    return NextResponse.json({ error: 'date is required.' }, { status: 400 });
+    return NextResponse.json({ error: getApiLocalizedText(req, 'date is required.') }, { status: 400 });
   }
   if (typeof mode !== 'string' || !['VIDEO', 'CALL', 'CHAT'].includes(mode.toUpperCase())) {
-    return NextResponse.json({ error: 'mode must be VIDEO, CALL, or CHAT.' }, { status: 400 });
+    return NextResponse.json(
+      { error: getApiLocalizedText(req, 'mode must be VIDEO, CALL, or CHAT.') },
+      { status: 400 }
+    );
   }
 
   const appointmentDate = new Date(date);
   if (isNaN(appointmentDate.getTime()) || appointmentDate < new Date()) {
-    return NextResponse.json({ error: 'date must be a valid future date.' }, { status: 400 });
+    return NextResponse.json(
+      { error: getApiLocalizedText(req, 'date must be a valid future date.') },
+      { status: 400 }
+    );
   }
 
   // Verify lawyer exists
   const lawyer = await prisma.lawyerProfile.findUnique({ where: { id: lawyerId } });
   if (!lawyer) {
-    return NextResponse.json({ error: 'Lawyer not found.' }, { status: 404 });
+    return NextResponse.json({ error: getApiLocalizedText(req, 'Lawyer not found.') }, { status: 404 });
   }
 
   // Prevent double-booking same time slot for same lawyer
@@ -56,7 +64,10 @@ export async function POST(req: NextRequest) {
     },
   });
   if (conflict) {
-    return NextResponse.json({ error: 'This time slot is already booked. Please choose another.' }, { status: 409 });
+    return NextResponse.json(
+      { error: getApiLocalizedText(req, 'This time slot is already booked. Please choose another.') },
+      { status: 409 }
+    );
   }
 
   // Generate Razorpay Order
@@ -81,7 +92,10 @@ export async function POST(req: NextRequest) {
       razorpayOrderId = order.id;
     } catch (err) {
       console.error('[Razorpay] Order creation failed:', err);
-      return NextResponse.json({ error: 'Failed to initialize payment gateway.' }, { status: 500 });
+      return NextResponse.json(
+        { error: getApiLocalizedText(req, 'Failed to initialize payment gateway.') },
+        { status: 500 }
+      );
     }
   }
 
@@ -132,15 +146,16 @@ export async function POST(req: NextRequest) {
     }, { status: 201 });
   } catch (error) {
     console.error('[Appointments API] Create error:', error);
-    return NextResponse.json({ error: 'Failed to create appointment.' }, { status: 500 });
+    return NextResponse.json({ error: getApiLocalizedText(req, 'Failed to create appointment.') }, { status: 500 });
   }
 }
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
+    return NextResponse.json({ error: getApiLocalizedText(req, 'Authentication required.') }, { status: 401 });
   }
+  const locale = getApiLocale(req);
 
   try {
     const role = session.user.role;
@@ -171,17 +186,27 @@ export async function GET(req: NextRequest) {
           lawyer: {
             include: {
               user: { select: { name: true, image: true } },
-              specializations: { select: { name: true } },
+              specializations: { include: { translations: true } },
             },
           },
         },
         orderBy: { date: 'asc' },
       });
+
+      appointments = appointments.map((appointment) => ({
+        ...appointment,
+        lawyer: {
+          ...appointment.lawyer,
+          specializations: appointment.lawyer.specializations.map((specialization) =>
+            localizeNamedEntity(specialization, locale)
+          ),
+        },
+      }));
     }
 
     return NextResponse.json({ appointments });
   } catch (error) {
     console.error('[Appointments API] Fetch error:', error);
-    return NextResponse.json({ error: 'Failed to fetch appointments.' }, { status: 500 });
+    return NextResponse.json({ error: getApiLocalizedText(req, 'Failed to fetch appointments.') }, { status: 500 });
   }
 }

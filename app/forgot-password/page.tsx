@@ -1,14 +1,34 @@
-"use client";
+'use client';
 
-import React, { useState } from "react";
-import Link from "next/link";
-import { Mail, Loader2, ArrowLeft } from "lucide-react";
-import { toast } from "react-hot-toast";
+import React, { useState } from 'react';
+import { ArrowLeft, Loader2, Mail } from 'lucide-react';
+import { toast } from 'react-hot-toast';
+
+import LocaleLink from '@/components/LocaleLink';
+import { localizeTreeFromMemory } from '@/lib/content/localized';
+import { REQUEST_LOCALE_HEADER } from '@/lib/i18n/config';
+import { useLanguage } from '@/lib/LanguageContext';
+
+const FORGOT_PASSWORD_PAGE = {
+  title: 'Reset password',
+  subtitle: 'Enter your email to receive a secure recovery link.',
+  successTitle: 'Check your inbox',
+  successBody: 'If an account matches, we sent a reset link.',
+  emailLabel: 'Email address',
+  emailPlaceholder: 'you@example.com',
+  submit: 'Send reset link',
+  backHome: 'Back to home',
+  resetSent: 'Reset email sent.',
+  genericError: 'Something went wrong.',
+  networkError: 'Network error. Please try again.',
+} as const;
 
 export default function ForgotPasswordPage() {
-  const [email, setEmail] = useState("");
+  const { lang } = useLanguage();
+  const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const copy = localizeTreeFromMemory(FORGOT_PASSWORD_PAGE, lang);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -17,9 +37,12 @@ export default function ForgotPasswordPage() {
     setIsLoading(true);
 
     try {
-      const res = await fetch("/api/auth/forgot-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const res = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          [REQUEST_LOCALE_HEADER]: lang,
+        },
         body: JSON.stringify({ email }),
       });
 
@@ -27,48 +50,46 @@ export default function ForgotPasswordPage() {
 
       if (res.ok) {
         setIsSuccess(true);
-        toast.success(data.message || "Reset email sent!");
+        toast.success(data.message || copy.resetSent);
       } else {
-        toast.error(data.error || "Something went wrong.");
+        toast.error(data.error || copy.genericError);
       }
     } catch {
-      toast.error("Network error. Please try again.");
+      toast.error(copy.networkError);
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8 bg-white p-10 rounded-2xl shadow-xl">
+    <div className="flex min-h-screen items-center justify-center bg-muted px-4 py-12 sm:px-6 lg:px-8">
+      <div className="w-full max-w-md space-y-8 rounded-2xl border border-border bg-background p-10 shadow-xl">
         <div className="text-center">
-          <h2 className="text-3xl font-extrabold text-gray-900">Reset Password</h2>
-          <p className="mt-2 text-sm text-gray-600">
-            Enter your email to receive a secure recovery link.
-          </p>
+          <h2 className="text-3xl font-extrabold text-foreground">{copy.title}</h2>
+          <p className="mt-2 text-sm text-muted-foreground">{copy.subtitle}</p>
         </div>
 
         {isSuccess ? (
-          <div className="bg-green-50 border border-green-200 text-green-700 p-4 rounded-xl text-center">
-            <p className="font-medium">Check your inbox!</p>
-            <p className="text-sm mt-1">If an account matches, we&apos;ve sent a reset link.</p>
+          <div className="rounded-xl border border-success/30 bg-success/10 p-4 text-center text-success">
+            <p className="font-medium">{copy.successTitle}</p>
+            <p className="mt-1 text-sm">{copy.successBody}</p>
           </div>
         ) : (
           <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                Email Address
+              <label htmlFor="email" className="mb-1 block text-sm font-medium text-foreground">
+                {copy.emailLabel}
               </label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Mail className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
                 <input
                   id="email"
                   type="email"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="pl-10 w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-[#1E3A8A] focus:border-[#1E3A8A]"
-                  placeholder="you@example.com"
+                  className="w-full rounded-xl border border-border px-4 py-3 pl-10 outline-none transition-all placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20"
+                  placeholder={copy.emailPlaceholder}
                 />
               </div>
             </div>
@@ -76,18 +97,21 @@ export default function ForgotPasswordPage() {
             <button
               type="submit"
               disabled={isLoading || !email}
-              className="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-bold text-white bg-[#1E3A8A] hover:bg-blue-800 disabled:opacity-50 transition-colors"
+              className="flex w-full justify-center rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 disabled:opacity-50"
             >
-              {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Send Reset Link"}
+              {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : copy.submit}
             </button>
           </form>
         )}
 
-        <div className="text-center mt-6">
-          <Link href="/" className="inline-flex items-center text-sm font-medium text-[#1E3A8A] hover:underline">
-            <ArrowLeft className="w-4 h-4 mr-1" />
-            Back to Home
-          </Link>
+        <div className="mt-6 text-center">
+          <LocaleLink
+            href="/"
+            className="inline-flex items-center text-sm font-medium text-primary transition-colors hover:text-primary/80 hover:underline"
+          >
+            <ArrowLeft className="mr-1 h-4 w-4" />
+            {copy.backHome}
+          </LocaleLink>
         </div>
       </div>
     </div>

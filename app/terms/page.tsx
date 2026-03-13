@@ -1,13 +1,11 @@
 import type { Metadata } from 'next';
-import { FileText, AlertTriangle, Scale, Users, CreditCard, Bot } from 'lucide-react';
+import { AlertTriangle, Bot, CreditCard, FileText, Scale, Users } from 'lucide-react';
 
-export const metadata: Metadata = {
-  title: 'Terms of Service | LexIndia',
-  description: 'Read the Terms of Service for LexIndia — the Indian legal-tech platform connecting citizens with verified lawyers.',
-  alternates: { canonical: '/terms' },
-};
+import { createLocalizedMetadata } from '@/lib/i18n/metadata';
+import { getMemoryLocalizedText, localizeTreeFromMemory } from '@/lib/content/localized';
+import { getRequestLocale } from '@/lib/i18n/request';
 
-const sections = [
+const TERMS_SECTIONS = [
   {
     icon: Users,
     title: '1. Eligibility and Account',
@@ -25,7 +23,7 @@ const sections = [
     items: [
       'LexIndia is a technology platform that facilitates connections between citizens and legal professionals. It is not a law firm.',
       'LexIndia does not provide legal advice. All legal advice is provided by independent lawyers listed on the platform.',
-      'The platform does not endorse any specific lawyer\u2019s advice or guarantee specific legal outcomes.',
+      "The platform does not endorse any specific lawyer's advice or guarantee specific legal outcomes.",
       'Lawyer profiles are created by lawyers themselves. LexIndia verifies Bar Council registration but does not verify all profile claims.',
       'LexIndia operates only within the jurisdiction of India and provides information about Indian law.',
     ],
@@ -75,64 +73,106 @@ const sections = [
       'Legal templates are provided for general guidance. Adapt templates with professional legal advice before use.',
     ],
   },
-];
+] as const;
 
-export default function TermsPage() {
+const TERMS_PAGE = {
+  legalBadge: 'Legal',
+  title: 'Terms of Service',
+  intro:
+    'Please read these terms carefully before using LexIndia. By registering or using our services, you agree to be bound by these terms.',
+  effective: 'Effective: 10 March 2026',
+  lastUpdated: 'Last Updated: 10 March 2026',
+  version: 'Version 1.0',
+  noticeTitle: 'Not Legal Advice',
+  noticeBody:
+    'LexIndia is a technology platform, not a law firm. Content on this platform, including AI responses, knowledge base articles, and legal guides, is for general informational purposes only and does not constitute legal advice.',
+  liabilityTitle: '7. Limitation of Liability',
+  liabilityBodyOne:
+    'To the maximum extent permitted by applicable Indian law, LexIndia and its officers, directors, employees, and agents shall not be liable for any indirect, incidental, special, or consequential damages arising from your use of the platform.',
+  liabilityBodyTwo:
+    "LexIndia's total liability for any claim arising from these terms shall not exceed the amount paid by you to LexIndia in the 3 months preceding the claim.",
+  disputeTitle: '8. Governing Law and Dispute Resolution',
+  disputeBodyOne:
+    'These Terms are governed by the laws of India. Any disputes arising shall be subject to the exclusive jurisdiction of the courts at [City], India.',
+  disputeBodyTwo:
+    'We encourage resolution of disputes through our grievance mechanism first. Contact us at legal@lexindia.in with your concern. We aim to resolve disputes within 30 days.',
+  changesTitle: '9. Changes to These Terms',
+  changesBody:
+    'We may modify these Terms at any time. Material changes will be communicated via email to registered users at least 14 days before taking effect. Continued use of LexIndia after changes constitutes acceptance.',
+  contactTitle: 'Questions About These Terms?',
+  contactBody: 'Contact our legal team:',
+  emailLabel: 'Email',
+  legalEmail: 'legal@lexindia.in',
+  grievanceLabel: 'Grievance Officer',
+  grievanceValue: 'LexIndia Legal Team',
+} as const;
+
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getRequestLocale();
+
+  return createLocalizedMetadata({
+    locale,
+    pathname: '/terms',
+    title: `${getMemoryLocalizedText('Terms of Service', locale)} | LexIndia`,
+    description: getMemoryLocalizedText(
+      'Read the Terms of Service for LexIndia, the Indian legal-tech platform connecting citizens with verified lawyers.',
+      locale
+    ),
+  });
+}
+
+export default async function TermsPage() {
+  const locale = await getRequestLocale();
+  const sections = localizeTreeFromMemory(TERMS_SECTIONS, locale, { skipKeys: ['icon'] });
+  const copy = localizeTreeFromMemory(TERMS_PAGE, locale);
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Hero */}
-      <div className="bg-[#1E3A8A] text-white py-16">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-3 mb-4">
-            <FileText className="w-8 h-8 text-[#D4AF37]" />
-            <span className="text-[#D4AF37] font-semibold uppercase tracking-wider text-sm">Legal</span>
+    <div className="min-h-screen bg-muted">
+      <div className="bg-primary py-16 text-primary-foreground">
+        <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
+          <div className="mb-4 flex items-center gap-3">
+            <FileText className="h-8 w-8 text-accent" />
+            <span className="text-sm font-semibold uppercase tracking-wider text-accent">{copy.legalBadge}</span>
           </div>
-          <h1 className="text-3xl sm:text-4xl font-bold mb-4">Terms of Service</h1>
-          <p className="text-blue-200 text-lg max-w-2xl">
-            Please read these terms carefully before using LexIndia. By registering or using our services,
-            you agree to be bound by these terms.
-          </p>
-          <div className="mt-6 flex flex-wrap gap-4 text-sm text-blue-300">
-            <span>Effective: 10 March 2026</span>
-            <span>·</span>
-            <span>Last Updated: 10 March 2026</span>
-            <span>·</span>
-            <span>Version 1.0</span>
+          <h1 className="mb-4 text-3xl font-bold sm:text-4xl">{copy.title}</h1>
+          <p className="max-w-2xl text-lg text-primary-foreground/80">{copy.intro}</p>
+          <div className="mt-6 flex flex-wrap gap-4 text-sm text-primary-foreground/75">
+            <span>{copy.effective}</span>
+            <span>/</span>
+            <span>{copy.lastUpdated}</span>
+            <span>/</span>
+            <span>{copy.version}</span>
           </div>
         </div>
       </div>
 
-      {/* Important Notice */}
-      <div className="bg-red-50 border-b border-red-200">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+      <div className="border-b border-danger/30 bg-danger/10">
+        <div className="mx-auto max-w-4xl px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex items-start gap-3">
-            <AlertTriangle className="w-5 h-5 text-red-600 mt-0.5 shrink-0" />
-            <p className="text-red-800 text-sm">
-              <strong>Not Legal Advice:</strong> LexIndia is a technology platform, not a law firm. Content on this platform,
-              including AI responses, knowledge base articles, and legal guides, is for general informational purposes only
-              and does not constitute legal advice.
+            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-danger" />
+            <p className="text-sm text-danger">
+              <strong>{copy.noticeTitle}:</strong> {copy.noticeBody}
             </p>
           </div>
         </div>
       </div>
 
-      {/* Content */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6 lg:px-8">
         <div className="space-y-8">
           {sections.map((section) => {
             const Icon = section.icon;
             return (
-              <div key={section.title} className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center">
-                    <Icon className="w-5 h-5 text-[#1E3A8A]" />
+              <div key={section.title} className="rounded-2xl border border-border bg-background p-8 shadow-sm">
+                <div className="mb-6 flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
+                    <Icon className="h-5 w-5 text-primary" />
                   </div>
-                  <h2 className="text-xl font-bold text-gray-900">{section.title}</h2>
+                  <h2 className="text-xl font-bold text-foreground">{section.title}</h2>
                 </div>
                 <ul className="space-y-3">
-                  {section.items.map((item, i) => (
-                    <li key={i} className="flex items-start gap-3 text-gray-600 text-sm leading-relaxed">
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#D4AF37] mt-2 shrink-0" />
+                  {section.items.map((item) => (
+                    <li key={item} className="flex items-start gap-3 text-sm leading-relaxed text-muted-foreground">
+                      <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />
                       {item}
                     </li>
                   ))}
@@ -141,49 +181,33 @@ export default function TermsPage() {
             );
           })}
 
-          {/* Limitation of Liability */}
-          <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">7. Limitation of Liability</h2>
-            <p className="text-gray-600 text-sm leading-relaxed mb-3">
-              To the maximum extent permitted by applicable Indian law, LexIndia and its officers, directors, employees,
-              and agents shall not be liable for any indirect, incidental, special, or consequential damages arising
-              from your use of the platform.
-            </p>
-            <p className="text-gray-600 text-sm leading-relaxed">
-              LexIndia&apos;s total liability for any claim arising from these terms shall not exceed the amount paid
-              by you to LexIndia in the 3 months preceding the claim.
-            </p>
+          <div className="rounded-2xl border border-border bg-background p-8 shadow-sm">
+            <h2 className="mb-4 text-xl font-bold text-foreground">{copy.liabilityTitle}</h2>
+            <p className="mb-3 text-sm leading-relaxed text-muted-foreground">{copy.liabilityBodyOne}</p>
+            <p className="text-sm leading-relaxed text-muted-foreground">{copy.liabilityBodyTwo}</p>
           </div>
 
-          {/* Dispute Resolution */}
-          <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">8. Governing Law and Dispute Resolution</h2>
-            <p className="text-gray-600 text-sm leading-relaxed mb-3">
-              These Terms are governed by the laws of India. Any disputes arising shall be subject to the exclusive
-              jurisdiction of the courts at [City], India.
-            </p>
-            <p className="text-gray-600 text-sm leading-relaxed">
-              We encourage resolution of disputes through our grievance mechanism first. Contact us at
-              legal@lexindia.in with your concern. We aim to resolve disputes within 30 days.
-            </p>
+          <div className="rounded-2xl border border-border bg-background p-8 shadow-sm">
+            <h2 className="mb-4 text-xl font-bold text-foreground">{copy.disputeTitle}</h2>
+            <p className="mb-3 text-sm leading-relaxed text-muted-foreground">{copy.disputeBodyOne}</p>
+            <p className="text-sm leading-relaxed text-muted-foreground">{copy.disputeBodyTwo}</p>
           </div>
 
-          {/* Changes */}
-          <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">9. Changes to These Terms</h2>
-            <p className="text-gray-600 text-sm leading-relaxed">
-              We may modify these Terms at any time. Material changes will be communicated via email to registered users
-              at least 14 days before taking effect. Continued use of LexIndia after changes constitutes acceptance.
-            </p>
+          <div className="rounded-2xl border border-border bg-background p-8 shadow-sm">
+            <h2 className="mb-4 text-xl font-bold text-foreground">{copy.changesTitle}</h2>
+            <p className="text-sm leading-relaxed text-muted-foreground">{copy.changesBody}</p>
           </div>
 
-          {/* Contact */}
-          <div className="bg-[#1E3A8A] rounded-2xl p-8 text-white">
-            <h2 className="text-xl font-bold mb-2">Questions About These Terms?</h2>
-            <p className="text-blue-200 text-sm mb-4">Contact our legal team:</p>
-            <div className="space-y-1 text-sm text-blue-100">
-              <p><strong className="text-white">Email:</strong> legal@lexindia.in</p>
-              <p><strong className="text-white">Grievance Officer:</strong> LexIndia Legal Team</p>
+          <div className="rounded-2xl bg-primary p-8 text-primary-foreground">
+            <h2 className="mb-2 text-xl font-bold">{copy.contactTitle}</h2>
+            <p className="mb-4 text-sm text-primary-foreground/80">{copy.contactBody}</p>
+            <div className="space-y-1 text-sm text-primary-foreground/85">
+              <p>
+                <strong className="text-primary-foreground">{copy.emailLabel}:</strong> {copy.legalEmail}
+              </p>
+              <p>
+                <strong className="text-primary-foreground">{copy.grievanceLabel}:</strong> {copy.grievanceValue}
+              </p>
             </div>
           </div>
         </div>

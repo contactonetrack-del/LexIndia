@@ -1,16 +1,31 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-  Search, BookOpen, Shield, Scale, AlertTriangle,
-  ChevronDown, ChevronUp, ExternalLink, Landmark, Smartphone
+  AlertTriangle,
+  BookOpen,
+  ChevronDown,
+  ChevronUp,
+  ExternalLink,
+  Landmark,
+  Scale,
+  Search,
+  Shield,
+  Smartphone,
 } from 'lucide-react';
-import Link from 'next/link';
-import { useLanguage } from '@/lib/LanguageContext';
-import { getTranslation } from '@/lib/translations';
+
+import LocaleLink from '@/components/LocaleLink';
+import { ConsultationCTA } from '@/components/ui/ConsultationCTA';
 import { FAQSkeleton } from '@/components/ui/Skeletons';
 import { LeadCapture } from '@/components/ui/LeadCapture';
-import { ConsultationCTA } from '@/components/ui/ConsultationCTA';
+import {
+  HighlightBanner,
+  PageContainer,
+  PageShell,
+  SurfaceCard,
+} from '@/components/ui/theme-primitives';
+import { getKnowledgeContent } from '@/lib/content/knowledge';
+import { useLanguage } from '@/lib/LanguageContext';
 
 interface FAQ {
   id: string;
@@ -24,147 +39,179 @@ interface FAQCategory {
   faqs: FAQ[];
 }
 
-const CATEGORY_ICONS: Record<string, React.ElementType> = {
-  'Arrest Rights': Shield,
-  'Domestic Violence': AlertTriangle,
-  'Consumer Rights': BookOpen,
-};
+const RESOURCE_ICONS = [Landmark, Smartphone];
 
 export default function KnowledgeBase() {
-  const { lang, isIndic } = useLanguage();
-  const t = getTranslation(lang);
+  const { fontClass, lang, t } = useLanguage();
+  const content = getKnowledgeContent(lang);
+  const searchAriaLabel = t.knowledge.searchPlaceholder;
+
   const [categories, setCategories] = useState<FAQCategory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [openQ, setOpenQ] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
-    fetch('/api/knowledge')
-      .then(r => r.json())
-      .then(data => { setCategories(data.categories || []); setIsLoading(false); })
+    fetch(`/api/knowledge?locale=${lang}`)
+      .then((response) => response.json())
+      .then((data) => {
+        setCategories(data.categories || []);
+        setIsLoading(false);
+      })
       .catch(() => setIsLoading(false));
-  }, []);
+  }, [lang]);
 
-  const filtered = categories.map(cat => ({
-    ...cat,
-    faqs: searchQuery
-      ? cat.faqs.filter(f =>
-        f.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        f.answer.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-      : cat.faqs,
-  })).filter(cat => cat.faqs.length > 0);
+  const filteredCategories = categories
+    .map((category) => ({
+      ...category,
+      faqs: searchQuery
+        ? category.faqs.filter((faq) => {
+            const normalizedQuery = searchQuery.toLowerCase();
+            return (
+              faq.question.toLowerCase().includes(normalizedQuery) ||
+              faq.answer.toLowerCase().includes(normalizedQuery)
+            );
+          })
+        : category.faqs,
+    }))
+    .filter((category) => category.faqs.length > 0);
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-
-        <div className="text-center mb-12">
-          <h1 className={`text-3xl md:text-4xl font-bold text-gray-900 mb-4 ${isIndic ? 'font-hindi' : ''}`}>
+    <PageShell>
+      <PageContainer className="max-w-5xl">
+        <div className="mb-12 text-center">
+          <h1 className={`mb-4 text-3xl font-bold text-foreground md:text-4xl ${fontClass}`}>
             {t.knowledge.title}
           </h1>
-          <p className={`text-lg text-gray-600 mb-8 ${isIndic ? 'font-hindi' : ''}`}>
+          <p className={`mx-auto mb-8 max-w-3xl text-lg text-muted-foreground ${fontClass}`}>
             {t.knowledge.subtitle}
           </p>
 
-          <div className="relative max-w-2xl mx-auto">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" aria-hidden="true" />
-            <label htmlFor="knowledge-search" className="sr-only">Search legal topics</label>
+          <div className="relative mx-auto max-w-2xl">
+            <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+            <label htmlFor="knowledge-search" className="sr-only">
+              {searchAriaLabel}
+            </label>
             <input
               id="knowledge-search"
               type="text"
               placeholder={t.knowledge.searchPlaceholder}
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-12 pr-4 py-4 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#1E3A8A]/20 focus:border-[#1E3A8A] outline-none transition-all shadow-sm text-lg"
+              onChange={(event) => setSearchQuery(event.target.value)}
+              className={`w-full rounded-xl border border-border bg-background py-4 pl-12 pr-4 text-lg text-foreground outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20 ${fontClass}`}
             />
           </div>
         </div>
 
-        {/* Free Legal Aid Banner */}
-        <div className="bg-blue-50 border border-blue-200 rounded-2xl p-6 mb-12 flex flex-col sm:flex-row items-center justify-between gap-6">
+        <HighlightBanner className="mb-12 flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-center">
           <div className="flex items-start gap-4">
-            <div className="w-12 h-12 bg-[#1E3A8A] rounded-full flex items-center justify-center shrink-0">
-              <Scale className="w-6 h-6 text-white" />
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
+              <Scale className="h-6 w-6" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-gray-900 mb-1">Free Legal Aid (NALSA)</h3>
-              <p className="text-gray-600 text-sm">
-                Women, children, SC/ST members, industrial workmen, and persons with an annual income less than ₹3,000,000 are eligible for free legal aid.
+              <h2 className={`mb-1 text-lg font-bold text-foreground ${fontClass}`}>
+                {content.freeAid.title}
+              </h2>
+              <p className={`text-sm text-muted-foreground ${fontClass}`}>
+                {content.freeAid.description}
               </p>
             </div>
           </div>
           <a
-            href="https://nalsa.gov.in/lsams/"
+            href={content.freeAid.href}
             target="_blank"
             rel="noopener noreferrer"
-            className="shrink-0 bg-[#1E3A8A] text-white px-6 py-3 rounded-xl font-semibold hover:bg-blue-800 transition-colors flex items-center gap-2"
+            className={`inline-flex shrink-0 items-center gap-2 rounded-xl bg-primary px-6 py-3 font-semibold text-primary-foreground transition-colors hover:bg-primary/90 ${fontClass}`}
           >
-            Apply for Free Aid <ExternalLink className="w-4 h-4" />
+            {content.freeAid.button}
+            <ExternalLink className="h-4 w-4" />
           </a>
-        </div>
+        </HighlightBanner>
 
-        <ConsultationCTA 
-          title="Have a specific question not covered here?"
-          description="A short 15 minute call with a top-rated attorney can clear up any confusion and build your confidence."
-          buttonText="Talk to a Lawyer"
+        <ConsultationCTA
+          title={content.cta.title}
+          description={content.cta.description}
+          buttonText={content.cta.button}
         />
 
-        {/* Official Resources */}
         <div className="mb-12">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Official Government Resources</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <a href="https://services.ecourts.gov.in/" target="_blank" rel="noopener noreferrer" className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm hover:border-[#1E3A8A] transition-colors group">
-              <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center mb-4 group-hover:bg-[#1E3A8A] transition-colors">
-                <Landmark className="w-6 h-6 text-[#1E3A8A] group-hover:text-white transition-colors" />
-              </div>
-              <h3 className="text-lg font-bold text-gray-900 mb-2 flex items-center gap-2">eCourts Services <ExternalLink className="w-4 h-4 text-gray-400" /></h3>
-              <p className="text-gray-600 text-sm">Check case status, court orders, and cause lists across all District Courts in India.</p>
-            </a>
-            <a href="https://www.tele-law.in/" target="_blank" rel="noopener noreferrer" className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm hover:border-[#1E3A8A] transition-colors group">
-              <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center mb-4 group-hover:bg-[#1E3A8A] transition-colors">
-                <Smartphone className="w-6 h-6 text-[#1E3A8A] group-hover:text-white transition-colors" />
-              </div>
-              <h3 className="text-lg font-bold text-gray-900 mb-2 flex items-center gap-2">Tele-Law <ExternalLink className="w-4 h-4 text-gray-400" /></h3>
-              <p className="text-gray-600 text-sm">Pre-litigation advice through video conferencing by panel lawyers for marginalized communities.</p>
-            </a>
+          <h2 className={`mb-6 text-2xl font-bold text-foreground ${fontClass}`}>
+            {content.officialResourcesTitle}
+          </h2>
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+            {content.officialResources.map((resource, index) => {
+              const Icon = RESOURCE_ICONS[index] ?? BookOpen;
+
+              return (
+                <SurfaceCard
+                  key={resource.id}
+                  className="group rounded-2xl p-6 transition-colors hover:border-primary/30"
+                >
+                  <a href={resource.href} target="_blank" rel="noopener noreferrer" className="block">
+                    <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+                      <Icon className="h-6 w-6" />
+                    </div>
+                    <h3 className={`mb-2 flex items-center gap-2 text-lg font-bold text-foreground ${fontClass}`}>
+                      {resource.title}
+                      <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                    </h3>
+                    <p className={`text-sm text-muted-foreground ${fontClass}`}>
+                      {resource.description}
+                    </p>
+                  </a>
+                </SurfaceCard>
+              );
+            })}
           </div>
         </div>
 
-        {/* FAQs from DB */}
         <div className="space-y-8">
           {isLoading ? (
             <FAQSkeleton />
-          ) : filtered.length === 0 ? (
-            <div className={`text-center py-12 text-gray-500 ${isIndic ? 'font-hindi' : ''}`}>
-              {searchQuery ? `${t.common.noResults} "${searchQuery}"` : t.common.noResults}
-            </div>
+          ) : filteredCategories.length === 0 ? (
+            <SurfaceCard className="rounded-2xl p-12 text-center">
+              <p className={`mb-4 text-muted-foreground ${fontClass}`}>
+                {searchQuery ? `${t.common.noResults} "${searchQuery}"` : t.common.noResults}
+              </p>
+              <LocaleLink
+                href="/lawyers"
+                className={`inline-flex rounded-xl bg-primary px-6 py-3 font-semibold text-primary-foreground transition-colors hover:bg-primary/90 ${fontClass}`}
+              >
+                {content.emptyState.button}
+              </LocaleLink>
+            </SurfaceCard>
           ) : (
-            filtered.map((section) => {
-              const Icon = CATEGORY_ICONS[section.name] ?? BookOpen;
+            filteredCategories.map((section, index) => {
+              const Icon = RESOURCE_ICONS[index] ?? Shield;
+
               return (
-                <div key={section.id} className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-                  <div className="bg-gray-50 px-6 py-4 border-b border-gray-200 flex items-center gap-3">
-                    <Icon className="w-6 h-6 text-[#1E3A8A]" aria-hidden="true" />
-                    <h2 className="text-xl font-bold text-gray-900">{section.name}</h2>
+                <SurfaceCard key={section.id} className="overflow-hidden">
+                  <div className="flex items-center gap-3 border-b border-border bg-surface px-6 py-4">
+                    <Icon className="h-6 w-6 text-primary" />
+                    <h2 className={`text-xl font-bold text-foreground ${fontClass}`}>{section.name}</h2>
                   </div>
-                  <div className="divide-y divide-gray-100">
+                  <div className="divide-y divide-border">
                     {section.faqs.map((item) => {
                       const isOpen = openQ === item.id;
+
                       return (
                         <div key={item.id} className="px-6 py-4">
                           <button
                             onClick={() => setOpenQ(isOpen ? null : item.id)}
                             aria-expanded={isOpen}
-                            className="w-full flex items-center justify-between text-left focus:outline-none focus:ring-2 focus:ring-[#1E3A8A] rounded"
+                            className="flex w-full items-center justify-between rounded-lg text-left focus:outline-none focus:ring-2 focus:ring-primary/20"
                           >
-                            <h3 className="text-lg font-medium text-gray-900 pr-4">{item.question}</h3>
-                            {isOpen
-                              ? <ChevronUp className="w-5 h-5 text-gray-500 shrink-0" aria-hidden="true" />
-                              : <ChevronDown className="w-5 h-5 text-gray-500 shrink-0" aria-hidden="true" />}
+                            <h3 className={`pr-4 text-lg font-medium text-foreground ${fontClass}`}>
+                              {item.question}
+                            </h3>
+                            {isOpen ? (
+                              <ChevronUp className="h-5 w-5 shrink-0 text-muted-foreground" />
+                            ) : (
+                              <ChevronDown className="h-5 w-5 shrink-0 text-muted-foreground" />
+                            )}
                           </button>
                           {isOpen && (
-                            <div className="mt-4 text-gray-600 leading-relaxed">
+                            <div className={`mt-4 leading-relaxed text-muted-foreground ${fontClass}`}>
                               {item.answer}
                             </div>
                           )}
@@ -172,24 +219,26 @@ export default function KnowledgeBase() {
                       );
                     })}
                   </div>
-                </div>
+                </SurfaceCard>
               );
             })
           )}
         </div>
 
-        {/* Lead Capture */}
-        <div className="mt-16 mb-8">
+        <div className="mb-8 mt-16">
           <LeadCapture />
         </div>
 
         <div className="mt-12 text-center">
-          <p className="text-gray-600 mb-4">Can&apos;t find what you&apos;re looking for?</p>
-          <Link href="/lawyers" className="inline-flex bg-[#D4AF37] text-gray-900 font-bold px-8 py-3 rounded-xl hover:bg-yellow-500 transition-colors">
-            Talk to a Lawyer
-          </Link>
+          <p className={`mb-4 text-muted-foreground ${fontClass}`}>{content.emptyState.title}</p>
+          <LocaleLink
+            href="/lawyers"
+            className={`inline-flex rounded-xl bg-accent px-8 py-3 font-bold text-accent-foreground transition-colors hover:opacity-90 ${fontClass}`}
+          >
+            {content.emptyState.button}
+          </LocaleLink>
         </div>
-      </div>
-    </div>
+      </PageContainer>
+    </PageShell>
   );
 }

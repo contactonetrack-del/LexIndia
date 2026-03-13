@@ -1,47 +1,76 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Language, Translation, getTranslation } from './translations';
+import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+
+import {
+  LOCALE_COOKIE,
+  getLocaleDirection,
+  getLocaleFontToken,
+  type Locale,
+} from '@/lib/i18n/config';
+import { getMessages, type Translation } from '@/lib/i18n/messages';
 
 type LanguageContextType = {
-  lang: Language;
-  setLang: (lang: Language) => void;
+  lang: Locale;
+  locale: Locale;
+  setLang: (lang: Locale) => void;
   isIndic: boolean;
+  dir: 'ltr' | 'rtl';
+  fontClass: string;
   t: Translation;
 };
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
-export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const [lang, setLang] = useState<Language>('en');
+function persistLocale(lang: Locale) {
+  localStorage.setItem(LOCALE_COOKIE, lang);
+  document.cookie = `${LOCALE_COOKIE}=${lang}; path=/; max-age=31536000; SameSite=Lax`;
+}
 
-  // Persist language preference
+export function LanguageProvider({
+  children,
+  initialLang,
+}: {
+  children: React.ReactNode;
+  initialLang: Locale;
+}) {
+  const [lang, setLang] = useState<Locale>(initialLang);
+
   useEffect(() => {
-    const savedLang = localStorage.getItem('lexindia_lang') as Language;
-    if (savedLang) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setLang(savedLang);
-    }
-  }, []);
+    setLang(initialLang);
+  }, [initialLang]);
 
-  const handleSetLang = (newLang: Language) => {
-    setLang(newLang);
-    localStorage.setItem('lexindia_lang', newLang);
-  };
+  useEffect(() => {
+    persistLocale(lang);
+    document.documentElement.lang = lang;
+    document.documentElement.dir = getLocaleDirection(lang);
+    document.documentElement.dataset.locale = lang;
+    document.documentElement.style.setProperty(
+      '--font-current-locale',
+      `var(${getLocaleFontToken(lang)})`
+    );
+  }, [lang]);
 
-  const isIndic = lang !== 'en';
-  const t = getTranslation(lang);
+  const value = useMemo<LanguageContextType>(() => {
+    const direction = getLocaleDirection(lang);
 
-  return (
-    <LanguageContext.Provider value={{ lang, setLang: handleSetLang, isIndic, t }}>
-      {children}
-    </LanguageContext.Provider>
-  );
+    return {
+      lang,
+      locale: lang,
+      setLang,
+      isIndic: lang !== 'en',
+      dir: direction,
+      fontClass: lang === 'en' ? '' : 'font-locale',
+      t: getMessages(lang),
+    };
+  }, [lang]);
+
+  return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
 }
 
 export function useLanguage() {
   const context = useContext(LanguageContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useLanguage must be used within a LanguageProvider');
   }
   return context;

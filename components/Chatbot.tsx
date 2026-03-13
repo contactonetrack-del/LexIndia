@@ -1,9 +1,25 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
-import { MessageSquare, X, Send, Bot, User, Loader2, Scale, AlertTriangle, ExternalLink, Maximize2, Minimize2 } from 'lucide-react';
-import Markdown from 'react-markdown';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  AlertTriangle,
+  Bot,
+  ExternalLink,
+  Loader2,
+  Maximize2,
+  MessageSquare,
+  Minimize2,
+  Scale,
+  Send,
+  User,
+  X,
+} from 'lucide-react';
 import Link from 'next/link';
+import Markdown from 'react-markdown';
+
+import { getMemoryLocalizedText, localizeTreeFromMemory } from '@/lib/content/localized';
+import { useLanguage } from '@/lib/LanguageContext';
+import { localizeHref } from '@/lib/i18n/navigation';
 
 type Message = {
   id: string;
@@ -16,6 +32,28 @@ type ApiHistory = {
   parts: { text: string }[];
 };
 
+const COPY = {
+  title: 'LexIndia AI',
+  subtitle: 'Legal Information Assistant',
+  openAria: 'Open AI Legal Assistant',
+  closeAria: 'Close chat',
+  minimizeAria: 'Minimize chat',
+  maximizeAria: 'Maximize chat',
+  disclaimerText: 'General legal information only, not legal advice.',
+  disclaimerCta: 'Book a verified lawyer',
+  disclaimerSuffix: 'for your specific case.',
+  ctaPrompt: 'Need case-specific advice?',
+  ctaAction: 'Find a Lawyer',
+  ctaArrow: '->',
+  inputPlaceholder: 'Ask a legal question...',
+  inputAria: 'Your legal question',
+  sendAria: 'Send message',
+  footerText: 'AI can make mistakes. Always consult a verified lawyer for your case.',
+  loadingPlaceholder: '...',
+  unknownError: 'Unknown error',
+  fallbackError: 'Something went wrong. Please try again.',
+} as const;
+
 const INITIAL_MESSAGE: Message = {
   id: 'initial',
   role: 'model',
@@ -25,15 +63,30 @@ const INITIAL_MESSAGE: Message = {
 - Legal procedures and processes
 - Which type of lawyer you may need
 
-⚠️ *I provide general legal information only — not legal advice. For your specific situation, always consult a [verified lawyer](/lawyers).*
+I provide general legal information only and not legal advice. For your specific situation, always consult a [verified lawyer](/lawyers).
 
 How can I help you today?`,
 };
 
 export default function Chatbot() {
+  const { lang } = useLanguage();
+  const lawyersHref = localizeHref('/lawyers', lang);
+  const localizedCopy = localizeTreeFromMemory(COPY, lang);
+  const copy = {
+    ...localizedCopy,
+    ctaArrow: COPY.ctaArrow,
+    loadingPlaceholder: COPY.loadingPlaceholder,
+  } as const;
+  const initialMessage = useMemo(
+    () => ({
+      ...INITIAL_MESSAGE,
+      text: getMemoryLocalizedText(INITIAL_MESSAGE.text, lang).replace(/\(\/lawyers\)/g, `(${lawyersHref})`),
+    }),
+    [lang, lawyersHref]
+  );
   const [isOpen, setIsOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([INITIAL_MESSAGE]);
+  const [messages, setMessages] = useState<Message[]>([initialMessage]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -43,17 +96,22 @@ export default function Chatbot() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const buildApiHistory = (msgs: Message[]): ApiHistory[] => {
-    return msgs
-      .filter((m) => m.id !== 'initial' && m.text.trim())
-      .map((m) => ({
-        role: m.role,
-        parts: [{ text: m.text }],
-      }));
-  };
+  useEffect(() => {
+    setMessages((previous) =>
+      previous.length === 1 && previous[0]?.id === 'initial' ? [initialMessage] : previous
+    );
+  }, [initialMessage]);
 
-  const handleSend = async (e?: React.FormEvent) => {
-    e?.preventDefault();
+  const buildApiHistory = (currentMessages: Message[]): ApiHistory[] =>
+    currentMessages
+      .filter((message) => message.id !== 'initial' && message.text.trim())
+      .map((message) => ({
+        role: message.role,
+        parts: [{ text: message.text }],
+      }));
+
+  const handleSend = async (event?: React.FormEvent) => {
+    event?.preventDefault();
     if (!input.trim() || isLoading) return;
 
     const userText = input.trim();
@@ -63,8 +121,8 @@ export default function Chatbot() {
     const userMsgId = `user-${Date.now()}`;
     const modelMsgId = `model-${Date.now()}`;
 
-    setMessages((prev) => [
-      ...prev,
+    setMessages((previous) => [
+      ...previous,
       { id: userMsgId, role: 'user', text: userText },
       { id: modelMsgId, role: 'model', text: '' },
     ]);
@@ -73,31 +131,31 @@ export default function Chatbot() {
     try {
       const history = buildApiHistory(messages);
 
-      const res = await fetch('/api/ai-chat', {
+      const response = await fetch('/api/ai-chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: userText, history }),
+        body: JSON.stringify({ message: userText, history, locale: lang }),
       });
 
-      const data = await res.json();
+      const data = await response.json();
 
-      if (!res.ok) {
-        throw new Error(data.error ?? 'Unknown error');
+      if (!response.ok) {
+        throw new Error(data.error ?? copy.unknownError);
       }
 
-      setMessages((prev) =>
-        prev.map((msg) =>
-          msg.id === modelMsgId ? { ...msg, text: data.text } : msg
+      setMessages((previous) =>
+        previous.map((message) =>
+          message.id === modelMsgId ? { ...message, text: data.text } : message
         )
       );
-    } catch (err) {
-      const errMsg = err instanceof Error ? err.message : 'Something went wrong. Please try again.';
-      setError(errMsg);
-      setMessages((prev) =>
-        prev.map((msg) =>
-          msg.id === modelMsgId
-            ? { ...msg, text: `⚠️ ${errMsg}` }
-            : msg
+    } catch (caughtError) {
+      const errorMessage =
+        caughtError instanceof Error ? caughtError.message : copy.fallbackError;
+
+      setError(errorMessage);
+      setMessages((previous) =>
+        previous.map((message) =>
+          message.id === modelMsgId ? { ...message, text: errorMessage } : message
         )
       );
     } finally {
@@ -105,111 +163,118 @@ export default function Chatbot() {
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
+  const handleKeyDown = (event: React.KeyboardEvent) => {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
       handleSend();
     }
   };
 
   return (
     <>
-      {/* Chat Button */}
       <button
         onClick={() => setIsOpen(true)}
-        className={`fixed bottom-6 right-6 w-14 h-14 bg-[#1E3A8A] text-white rounded-full shadow-lg flex items-center justify-center hover:bg-blue-800 transition-transform duration-300 z-50 ${
+        data-testid="chatbot-trigger"
+        className={`fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform duration-300 hover:bg-primary/90 ${
           isOpen ? 'scale-0' : 'scale-100'
         }`}
-        aria-label="Open AI Legal Assistant"
+        aria-label={copy.openAria}
       >
-        <MessageSquare className="w-6 h-6" />
+        <MessageSquare className="h-6 w-6" />
       </button>
 
-      {/* Chat Window */}
       <div
-        className={`fixed bottom-6 right-6 ${isExpanded ? 'w-[calc(100vw-3rem)] sm:w-[600px] h-[calc(100vh-3rem)] md:h-[700px]' : 'w-[380px] h-[600px] max-h-[80vh]'} bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden transition-all duration-300 z-50 origin-bottom-right ${
-          isOpen ? 'scale-100 opacity-100' : 'scale-95 opacity-0 pointer-events-none'
-        }`}
+        className={`fixed bottom-6 right-6 z-50 origin-bottom-right overflow-hidden rounded-2xl border border-border bg-background shadow-2xl transition-all duration-300 ${
+          isExpanded
+            ? 'h-[calc(100vh-3rem)] w-[calc(100vw-3rem)] sm:w-[600px] md:h-[700px]'
+            : 'h-[600px] max-h-[80vh] w-[380px]'
+        } ${isOpen ? 'scale-100 opacity-100' : 'pointer-events-none scale-95 opacity-0'}`}
       >
-        {/* Header */}
-        <div className="bg-[#1E3A8A] text-white p-4 flex items-center justify-between shrink-0">
+        <div className="flex shrink-0 items-center justify-between bg-primary p-4 text-primary-foreground">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-              <Scale className="w-5 h-5" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-foreground/15">
+              <Scale className="h-5 w-5" />
             </div>
             <div>
-              <h3 className="font-semibold text-lg leading-tight">LexIndia AI</h3>
-              <p className="text-blue-200 text-xs">Legal Information Assistant</p>
+              <h3 className="text-lg font-semibold leading-tight">{copy.title}</h3>
+              <p className="text-xs text-primary-foreground/75">{copy.subtitle}</p>
             </div>
           </div>
           <div className="flex items-center gap-1">
             <button
               onClick={() => setIsExpanded(!isExpanded)}
-              className="text-blue-200 hover:text-white transition-colors p-1.5 rounded-lg hover:bg-white/10"
-              aria-label={isExpanded ? 'Minimize chat' : 'Maximize chat'}
+              className="rounded-lg p-1.5 text-primary-foreground/75 transition-colors hover:bg-primary-foreground/12 hover:text-primary-foreground"
+              aria-label={isExpanded ? copy.minimizeAria : copy.maximizeAria}
             >
-              {isExpanded ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+              {isExpanded ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
             </button>
             <button
               onClick={() => setIsOpen(false)}
-              className="text-blue-200 hover:text-white transition-colors p-1.5 rounded-lg hover:bg-white/10"
-              aria-label="Close chat"
+              className="rounded-lg p-1.5 text-primary-foreground/75 transition-colors hover:bg-primary-foreground/12 hover:text-primary-foreground"
+              aria-label={copy.closeAria}
             >
-              <X className="w-5 h-5" />
+              <X className="h-5 w-5" />
             </button>
           </div>
         </div>
 
-        {/* Disclaimer Banner */}
-        <div className="bg-amber-50 border-b border-amber-200 px-3 py-2 flex items-start gap-2 shrink-0">
-          <AlertTriangle className="w-3.5 h-3.5 text-amber-600 mt-0.5 shrink-0" />
-          <p className="text-amber-700 text-[10px] leading-relaxed">
-            General legal information only — not legal advice.{' '}
-            <Link href="/lawyers" className="underline font-semibold" onClick={() => setIsOpen(false)}>
-              Book a verified lawyer
+        <div className="flex shrink-0 items-start gap-2 border-b border-warning/30 bg-warning/10 px-3 py-2">
+          <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning" />
+          <p className="text-[10px] leading-relaxed text-warning">
+            {copy.disclaimerText}{' '}
+            <Link href={lawyersHref} className="font-semibold underline" onClick={() => setIsOpen(false)}>
+              {copy.disclaimerCta}
             </Link>{' '}
-            for your specific case.
+            {copy.disclaimerSuffix}
           </p>
         </div>
 
-        {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-4 bg-gray-50 flex flex-col gap-4">
-          {messages.map((msg) => (
+        <div className="flex flex-1 flex-col gap-4 overflow-y-auto bg-muted p-4">
+          {messages.map((message) => (
             <div
-              key={msg.id}
-              className={`flex gap-3 ${msg.role === 'user' ? 'ml-auto flex-row-reverse max-w-[85%]' : 'max-w-[92%]'}`}
+              key={message.id}
+              className={`flex gap-3 ${message.role === 'user' ? 'ml-auto max-w-[85%] flex-row-reverse' : 'max-w-[92%]'}`}
             >
               <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-1 ${
-                  msg.role === 'user' ? 'bg-[#D4AF37] text-gray-900' : 'bg-[#1E3A8A] text-white'
+                className={`mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
+                  message.role === 'user'
+                    ? 'bg-accent text-accent-foreground'
+                    : 'bg-primary text-primary-foreground'
                 }`}
               >
-                {msg.role === 'user' ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
+                {message.role === 'user' ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
               </div>
               <div
-                className={`p-3 rounded-2xl text-sm ${
-                  msg.role === 'user'
-                    ? 'bg-[#1E3A8A] text-white rounded-tr-none'
-                    : 'bg-white border border-gray-200 text-gray-800 rounded-tl-none shadow-sm'
+                className={`rounded-2xl p-3 text-sm ${
+                  message.role === 'user'
+                    ? 'rounded-tr-none bg-primary text-primary-foreground'
+                    : 'rounded-tl-none border border-border bg-background text-foreground shadow-sm'
                 }`}
               >
-                {msg.role === 'model' ? (
-                  <div className="prose prose-sm max-w-none prose-p:leading-relaxed prose-p:my-1 prose-a:text-[#1E3A8A] prose-a:font-medium">
+              {message.role === 'model' ? (
+                  <div className="prose prose-sm max-w-none prose-a:font-medium prose-a:text-primary prose-p:my-1 prose-p:leading-relaxed">
                     <Markdown
                       components={{
                         a: ({ href, children }) => (
-                          <a href={href} className="text-[#1E3A8A] underline" target={href?.startsWith('http') ? '_blank' : undefined} rel="noopener noreferrer">
+                          <a
+                            href={href}
+                            className="text-primary underline"
+                            target={href?.startsWith('http') ? '_blank' : undefined}
+                            rel="noopener noreferrer"
+                          >
                             {children}
-                            {href?.startsWith('http') && <ExternalLink className="w-3 h-3 inline ml-0.5" />}
+                            {href?.startsWith('http') && (
+                              <ExternalLink className="ml-0.5 inline h-3 w-3" />
+                            )}
                           </a>
                         ),
                       }}
                     >
-                      {msg.text || (isLoading && msg.id === messages.at(-1)?.id ? '...' : '')}
+                      {message.text || (isLoading && message.id === messages.at(-1)?.id ? copy.loadingPlaceholder : '')}
                     </Markdown>
                   </div>
                 ) : (
-                  msg.text
+                  message.text
                 )}
               </div>
             </div>
@@ -217,50 +282,47 @@ export default function Chatbot() {
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Book a Lawyer CTA (appears after 3 exchanges) */}
         {messages.length >= 5 && (
-          <div className="px-4 py-2 bg-blue-50 border-t border-blue-100 flex items-center justify-between shrink-0">
-            <p className="text-xs text-blue-700">Need case-specific advice?</p>
+          <div className="flex shrink-0 items-center justify-between border-t border-primary/20 bg-primary/10 px-4 py-2">
+            <p className="text-xs text-primary">{copy.ctaPrompt}</p>
             <Link
-              href="/lawyers"
+              href={lawyersHref}
               onClick={() => setIsOpen(false)}
-              className="text-xs font-semibold text-white bg-[#1E3A8A] px-3 py-1.5 rounded-lg hover:bg-blue-800 transition-colors"
+              className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
             >
-              Find a Lawyer →
+              {copy.ctaAction} {copy.ctaArrow}
             </Link>
           </div>
         )}
 
-        {/* Input */}
-        <div className="p-4 bg-white border-t border-gray-100 shrink-0">
+        <div className="shrink-0 border-t border-border bg-background p-4">
           {error && (
-            <p className="text-red-500 text-xs mb-2 flex items-center gap-1">
-              <AlertTriangle className="w-3 h-3" /> {error}
+            <p className="mb-2 flex items-center gap-1 text-xs text-danger">
+              <AlertTriangle className="h-3 w-3" /> {error}
             </p>
           )}
           <form onSubmit={handleSend} className="flex gap-2">
             <input
               type="text"
+              data-testid="chatbot-input"
               value={input}
-              onChange={(e) => setInput(e.target.value)}
+              onChange={(event) => setInput(event.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Ask a legal question..."
-              className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]/20 focus:border-[#1E3A8A] transition-all"
+              placeholder={copy.inputPlaceholder}
+              className="flex-1 rounded-xl border border-border bg-surface px-4 py-3 text-sm transition-all focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
               disabled={isLoading}
-              aria-label="Your legal question"
+              aria-label={copy.inputAria}
             />
             <button
               type="submit"
               disabled={!input.trim() || isLoading}
-              className="bg-[#D4AF37] text-gray-900 w-12 h-12 rounded-xl flex items-center justify-center hover:bg-yellow-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
-              aria-label="Send message"
+              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-accent text-accent-foreground transition-colors hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-50"
+              aria-label={copy.sendAria}
             >
-              {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+              {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
             </button>
           </form>
-          <p className="text-[10px] text-center text-gray-400 mt-2">
-            AI can make mistakes. Always consult a verified lawyer for your case.
-          </p>
+          <p className="mt-2 text-center text-[10px] text-muted-foreground">{copy.footerText}</p>
         </div>
       </div>
     </>

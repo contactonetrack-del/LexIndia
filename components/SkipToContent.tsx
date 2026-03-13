@@ -2,13 +2,24 @@
 
 import React from 'react';
 
+import { localizeTreeFromMemory } from '@/lib/content/localized';
+import { useLanguage } from '@/lib/LanguageContext';
+
 export default function SkipToContent() {
+  const { lang } = useLanguage();
+  const copy = localizeTreeFromMemory(
+    {
+      label: 'Skip to content',
+    } as const,
+    lang
+  );
+
   return (
     <a 
       href="#main-content"
-      className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:bg-[#1E3A8A] focus:text-white focus:rounded-md focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:font-bold transition-all"
+      className="sr-only transition-all focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:rounded-md focus:bg-primary focus:px-4 focus:py-2 focus:font-bold focus:text-primary-foreground focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-accent"
     >
-      Skip to content
+      {copy.label}
     </a>
   );
 }

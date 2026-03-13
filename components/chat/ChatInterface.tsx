@@ -1,7 +1,13 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Send, File, Paperclip, Loader2 } from 'lucide-react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Send, File, Paperclip, Loader2, X } from 'lucide-react';
+
+import { localizeTreeFromMemory } from '@/lib/content/localized';
+import { REQUEST_LOCALE_HEADER } from '@/lib/i18n/config';
+import { formatTime } from '@/lib/i18n/format';
+import { useLanguage } from '@/lib/LanguageContext';
+import { getTranslation } from '@/lib/translations';
 
 interface Message {
   id: string;
@@ -19,32 +25,58 @@ interface ChatInterfaceProps {
   otherUserName: string;
 }
 
-export default function ChatInterface({ appointmentId, currentUserId, otherUserName }: ChatInterfaceProps) {
+const FILE_SIZE_LIMIT_BYTES = 5 * 1024 * 1024;
+const POLL_INTERVAL_MS = 3000;
+
+export default function ChatInterface({
+  appointmentId,
+  currentUserId,
+  otherUserName,
+}: ChatInterfaceProps) {
+  const { lang } = useLanguage();
+  const t = getTranslation(lang);
+  const copy = localizeTreeFromMemory({
+    fileTooLarge: 'File size must be less than 5MB',
+    inConsultation: 'In consultation',
+    emptyChat: 'Send the first message to start this consultation chat.',
+    attachmentFallback: 'Attachment',
+    downloadFallback: 'download',
+    attachFile: 'Attach file',
+    messagePlaceholder: 'Type your message',
+    sendFailed: 'Failed to send message',
+    loadFailed: 'Failed to load messages',
+  } as const, lang);
+
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchMessages = useCallback(async () => {
     try {
-      const res = await fetch(`/api/chat?appointmentId=${appointmentId}`);
-      if (res.ok) {
-        const data = await res.json();
-        setMessages(data.messages);
+      const response = await fetch(`/api/chat?appointmentId=${appointmentId}`, {
+        headers: {
+          [REQUEST_LOCALE_HEADER]: lang,
+        },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setMessages(data.messages ?? []);
       }
-    } catch (e) {
-      console.error('Failed to fetch messages');
+    } catch {
+      console.error(copy.loadFailed);
     } finally {
       setIsLoading(false);
     }
-  }, [appointmentId]);
+  }, [appointmentId, copy.loadFailed, lang]);
 
   useEffect(() => {
     fetchMessages();
-    const interval = setInterval(fetchMessages, 3000); // Poll every 3 seconds
+    const interval = setInterval(fetchMessages, POLL_INTERVAL_MS);
     return () => clearInterval(interval);
   }, [fetchMessages]);
 
@@ -52,35 +84,34 @@ export default function ChatInterface({ appointmentId, currentUserId, otherUserN
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      const file = e.target.files[0];
-      // Max 5MB file limit for Base64 (PostgreSQL text limits)
-      if (file.size > 5 * 1024 * 1024) {
-        alert("File size must be less than 5MB");
-        return;
-      }
-      setSelectedFile(file);
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!event.target.files || event.target.files.length === 0) return;
+
+    const file = event.target.files[0];
+    if (file.size > FILE_SIZE_LIMIT_BYTES) {
+      window.alert(copy.fileTooLarge);
+      return;
     }
+
+    setSelectedFile(file);
   };
 
-  const convertToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
+  const convertToBase64 = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.readAsDataURL(file);
       reader.onload = () => resolve(reader.result as string);
-      reader.onerror = error => reject(error);
+      reader.onerror = (error) => reject(error);
     });
-  };
 
-  const sendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const sendMessage = async (event: React.FormEvent) => {
+    event.preventDefault();
     if (!newMessage.trim() && !selectedFile) return;
 
     setIsSending(true);
 
-    let fileUrl = null;
-    let fileName = null;
+    let fileUrl: string | null = null;
+    let fileName: string | null = null;
 
     if (selectedFile) {
       fileUrl = await convertToBase64(selectedFile);
@@ -88,10 +119,11 @@ export default function ChatInterface({ appointmentId, currentUserId, otherUserN
     }
 
     try {
-      const res = await fetch('/api/chat', {
+      const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          [REQUEST_LOCALE_HEADER]: lang,
         },
         body: JSON.stringify({
           appointmentId,
@@ -101,16 +133,17 @@ export default function ChatInterface({ appointmentId, currentUserId, otherUserN
         }),
       });
 
-      if (res.ok) {
-        setNewMessage('');
-        setSelectedFile(null);
-        if (fileInputRef.current) fileInputRef.current.value = '';
-        await fetchMessages();
-      } else {
-         console.error('Failed to send message');
+      if (!response.ok) {
+        console.error(copy.sendFailed);
+        return;
       }
-    } catch (e) {
-      console.error('Network error sending message');
+
+      setNewMessage('');
+      setSelectedFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      await fetchMessages();
+    } catch {
+      console.error(t.common.error);
     } finally {
       setIsSending(false);
     }
@@ -118,61 +151,72 @@ export default function ChatInterface({ appointmentId, currentUserId, otherUserN
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center h-64 bg-white rounded-2xl border border-gray-100">
-        <Loader2 className="w-8 h-8 text-[#1E3A8A] animate-spin" />
+      <div className="flex h-64 items-center justify-center rounded-2xl border border-border bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-[500px] bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-      {/* Header */}
-      <div className="px-5 py-4 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
+    <div className="flex h-[500px] flex-col overflow-hidden rounded-2xl border border-border bg-background shadow-sm">
+      <div className="flex items-center justify-between border-b border-border bg-surface px-5 py-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-[#1E3A8A] font-bold">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 font-bold text-primary">
             {otherUserName[0]?.toUpperCase() || 'U'}
           </div>
           <div>
-            <h3 className="font-bold text-gray-900">{otherUserName}</h3>
-            <span className="text-xs text-green-600 font-medium flex items-center gap-1">
-               <span className="w-1.5 h-1.5 bg-green-500 rounded-full inline-block"></span>
-               In Consultation
+            <h3 className="font-bold text-foreground">{otherUserName}</h3>
+            <span className="flex items-center gap-1 text-xs font-medium text-success">
+              <span className="inline-block h-1.5 w-1.5 rounded-full bg-success"></span>
+              {copy.inConsultation}
             </span>
           </div>
         </div>
       </div>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-5 space-y-4 bg-slate-50">
+      <div className="flex-1 space-y-4 overflow-y-auto bg-muted p-5">
         {messages.length === 0 ? (
-          <div className="text-center text-gray-400 mt-10 text-sm">
-            Say hello to start the conversation...
-          </div>
+          <div className="mt-10 text-center text-sm text-muted-foreground">{copy.emptyChat}</div>
         ) : (
-          messages.map((msg) => {
-            const isMe = msg.senderId === currentUserId;
+          messages.map((message) => {
+            const isCurrentUser = message.senderId === currentUserId;
             return (
-              <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[75%] rounded-2xl px-4 py-2 text-sm ${
-                  isMe ? 'bg-[#1E3A8A] text-white rounded-br-sm' : 'bg-white text-gray-800 border border-gray-100 shadow-sm rounded-bl-sm'
-                }`}>
-                  {msg.text && <p className="whitespace-pre-wrap">{msg.text}</p>}
-                  
-                  {msg.fileUrl && (
+              <div key={message.id} className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'}`}>
+                <div
+                  className={`max-w-[75%] rounded-2xl px-4 py-2 text-sm ${
+                    isCurrentUser
+                      ? 'rounded-br-sm bg-primary text-primary-foreground'
+                      : 'rounded-bl-sm border border-border bg-background text-foreground shadow-sm'
+                  }`}
+                >
+                  {message.text ? <p className="whitespace-pre-wrap">{message.text}</p> : null}
+
+                  {message.fileUrl ? (
                     <a
-                      href={msg.fileUrl}
-                      download={msg.fileName || 'download'}
-                      className={`flex items-center gap-2 mt-2 p-2 rounded border text-xs font-semibold ${
-                        isMe ? 'bg-blue-800/50 border-blue-700/50 text-blue-50 hover:bg-blue-700' : 'bg-gray-50 border-gray-200 text-[#1E3A8A] hover:bg-gray-100'
-                      } transition-colors`}
-                    >
-                      <File className="w-4 h-4" />
-                      <span className="truncate max-w-[150px]">{msg.fileName || 'Attachment'}</span>
+                      href={message.fileUrl}
+                      download={message.fileName || copy.downloadFallback}
+                      className={`mt-2 flex items-center gap-2 rounded border p-2 text-xs font-semibold ${
+                        isCurrentUser
+                          ? 'border-primary-foreground/25 bg-primary-foreground/10 text-primary-foreground hover:bg-primary-foreground/15'
+                          : 'border-border bg-surface text-primary hover:bg-surface-hover'
+                    } transition-colors`}
+                  >
+                    <File className="h-4 w-4" />
+                      <span className="max-w-[150px] truncate">
+                        {message.fileName || copy.attachmentFallback}
+                      </span>
                     </a>
-                  )}
-                  
-                  <div className={`text-[10px] mt-1 text-right ${isMe ? 'text-blue-200' : 'text-gray-400'}`}>
-                    {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  ) : null}
+
+                  <div
+                    className={`mt-1 text-right text-[10px] ${
+                      isCurrentUser ? 'text-primary-foreground/75' : 'text-muted-foreground'
+                    }`}
+                  >
+                    {formatTime(message.createdAt, lang, {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
                   </div>
                 </div>
               </div>
@@ -182,30 +226,32 @@ export default function ChatInterface({ appointmentId, currentUserId, otherUserN
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input */}
-      <form onSubmit={sendMessage} className="p-4 bg-white border-t border-gray-100">
-        {selectedFile && (
-          <div className="mb-2 flex items-center gap-2 text-xs bg-blue-50 text-blue-800 px-3 py-1.5 rounded-lg w-fit border border-blue-100">
-            <File className="w-3.5 h-3.5" />
-            <span className="truncate max-w-[200px]">{selectedFile.name}</span>
+      <form onSubmit={sendMessage} className="border-t border-border bg-background p-4">
+        {selectedFile ? (
+          <div className="mb-2 flex w-fit items-center gap-2 rounded-lg border border-primary/25 bg-primary/10 px-3 py-1.5 text-xs text-primary">
+            <File className="h-3.5 w-3.5" />
+            <span className="max-w-[200px] truncate">{selectedFile.name}</span>
             <button
-               type="button"
-               onClick={() => setSelectedFile(null)}
-               className="ml-2 px-1 text-blue-400 hover:text-blue-600 font-bold"
+              type="button"
+              onClick={() => setSelectedFile(null)}
+              className="ml-2 rounded p-0.5 text-primary/75 transition-colors hover:bg-primary/15 hover:text-primary"
+              aria-label={t.common.cancel}
             >
-               ✕
+              <X className="h-3.5 w-3.5" />
             </button>
           </div>
-        )}
+        ) : null}
+
         <div className="flex items-end gap-2">
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="p-2.5 text-gray-400 hover:text-[#1E3A8A] hover:bg-blue-50 rounded-xl transition-colors shrink-0"
-            title="Attach file"
+            className="shrink-0 rounded-xl p-2.5 text-muted-foreground transition-colors hover:bg-surface hover:text-primary"
+            title={copy.attachFile}
           >
-            <Paperclip className="w-5 h-5" />
+            <Paperclip className="h-5 w-5" />
           </button>
+
           <input
             type="file"
             ref={fileInputRef}
@@ -213,25 +259,27 @@ export default function ChatInterface({ appointmentId, currentUserId, otherUserN
             className="hidden"
             accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
           />
+
           <textarea
             value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            onKeyDown={(e) => {
-               if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  sendMessage(e);
-               }
+            onChange={(event) => setNewMessage(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                void sendMessage(event);
+              }
             }}
-            placeholder="Type your message..."
-            className="flex-1 max-h-32 min-h-[44px] border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]/20 focus:border-[#1E3A8A] transition-all resize-none"
+            placeholder={copy.messagePlaceholder}
+            className="max-h-32 min-h-[44px] flex-1 resize-none rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground transition-all placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
             rows={1}
           />
+
           <button
             type="submit"
             disabled={isSending || (!newMessage.trim() && !selectedFile)}
-            className="bg-[#1E3A8A] text-white p-3 rounded-xl hover:bg-blue-800 transition-colors disabled:opacity-50 shrink-0 shadow-sm"
+            className="shrink-0 rounded-xl bg-primary p-3 text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 disabled:opacity-50"
           >
-            {isSending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+            {isSending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
           </button>
         </div>
       </form>

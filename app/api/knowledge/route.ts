@@ -1,24 +1,39 @@
-import { NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
+import { NextRequest, NextResponse } from 'next/server';
 
-export async function GET() {
-    try {
-        const categories = await prisma.fAQCategory.findMany({
-            include: {
-                faqs: {
-                    select: { id: true, question: true, answer: true },
-                    orderBy: { createdAt: "asc" },
-                },
-            },
-            orderBy: { name: "asc" },
-        });
+import { getApiLocale, getApiLocalizedText } from '@/lib/i18n/api';
+import { localizeFields } from '@/lib/i18n/db';
+import prisma from '@/lib/prisma';
 
-        return NextResponse.json({ categories });
-    } catch (error) {
-        console.error("Knowledge API error:", error);
-        return NextResponse.json(
-            { error: "Failed to fetch knowledge base" },
-            { status: 500 }
-        );
-    }
+export async function GET(req: NextRequest) {
+  const locale = getApiLocale(req);
+
+  try {
+    const categories = await (prisma.fAQCategory as any).findMany({
+      include: {
+        translations: true,
+        faqs: {
+          include: {
+            translations: true,
+          },
+          orderBy: { createdAt: 'asc' },
+        },
+      },
+      orderBy: { name: 'asc' },
+    });
+
+    const localizedCategories = categories.map((category: any) => ({
+      ...localizeFields(category, category.translations, locale, ['name', 'description']),
+      faqs: category.faqs.map((faq: any) =>
+        localizeFields(faq, faq.translations, locale, ['question', 'answer'])
+      ),
+    }));
+
+    return NextResponse.json({ categories: localizedCategories });
+  } catch (error) {
+    console.error('Knowledge API error:', error);
+    return NextResponse.json(
+      { error: getApiLocalizedText(req, 'Failed to fetch knowledge base') },
+      { status: 500 }
+    );
+  }
 }

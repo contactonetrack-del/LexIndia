@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
+
 import { authOptions } from "@/lib/auth";
+import { getApiLocalizedText } from "@/lib/i18n/api";
 import Razorpay from "razorpay";
-import prisma from "@/lib/prisma";
 
 export async function POST(req: NextRequest) {
   try {
@@ -12,13 +13,16 @@ export async function POST(req: NextRequest) {
     });
     const session = await getServerSession(authOptions);
     if (!session || session.user.role !== "LAWYER") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ error: getApiLocalizedText(req, "Unauthorized") }, { status: 401 });
     }
 
     const { tier } = await req.json();
 
     if (!['PRO', 'ELITE'].includes(tier)) {
-      return NextResponse.json({ error: "Invalid tier specified" }, { status: 400 });
+      return NextResponse.json(
+        { error: getApiLocalizedText(req, "Invalid tier specified") },
+        { status: 400 }
+      );
     }
 
     const amountMap: Record<string, number> = {
@@ -49,7 +53,7 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error("Subscription Order creation failed:", error);
     return NextResponse.json(
-      { error: "Failed to initialize subscription" },
+      { error: getApiLocalizedText(req, "Failed to initialize subscription") },
       { status: 500 }
     );
   }

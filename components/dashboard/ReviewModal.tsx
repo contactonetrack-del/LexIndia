@@ -1,8 +1,12 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Star, X, Loader2 } from 'lucide-react';
+import { Loader2, Star, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+
+import { localizeTreeFromMemory } from '@/lib/content/localized';
+import { REQUEST_LOCALE_HEADER } from '@/lib/i18n/config';
+import { useLanguage } from '@/lib/LanguageContext';
 
 interface ReviewModalProps {
   isOpen: boolean;
@@ -12,7 +16,28 @@ interface ReviewModalProps {
   onSuccess: () => void;
 }
 
-export default function ReviewModal({ isOpen, onClose, appointmentId, lawyerName, onSuccess }: ReviewModalProps) {
+const COPY = {
+  ratingRequired: 'Please select a rating',
+  submitError: 'Failed to submit review',
+  submitSuccess: 'Review submitted successfully!',
+  title: 'Rate Your Consultation',
+  promptPrefix: 'How was your experience with',
+  promptSuffix: '?',
+  commentsLabel: 'Additional Comments (Optional)',
+  commentsPlaceholder: 'Share details of your experience to help others...',
+  submitting: 'Submitting...',
+  submit: 'Submit Review',
+} as const;
+
+export default function ReviewModal({
+  isOpen,
+  onClose,
+  appointmentId,
+  lawyerName,
+  onSuccess,
+}: ReviewModalProps) {
+  const { lang } = useLanguage();
+  const copy = localizeTreeFromMemory(COPY, lang);
   const [rating, setRating] = useState<number>(0);
   const [hoverRating, setHoverRating] = useState<number>(0);
   const [comment, setComment] = useState('');
@@ -20,27 +45,30 @@ export default function ReviewModal({ isOpen, onClose, appointmentId, lawyerName
 
   if (!isOpen) return null;
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
     if (rating === 0) {
-      toast.error('Please select a rating');
+      toast.error(copy.ratingRequired);
       return;
     }
 
     setIsSubmitting(true);
     try {
-      const res = await fetch('/api/reviews', {
+      const response = await fetch('/api/reviews', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          [REQUEST_LOCALE_HEADER]: lang,
+        },
         body: JSON.stringify({ appointmentId, rating, comment }),
       });
 
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error || 'Failed to submit review');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || copy.submitError);
       }
 
-      toast.success('Review submitted successfully!');
+      toast.success(copy.submitSuccess);
       onSuccess();
       onClose();
     } catch (error: any) {
@@ -51,58 +79,62 @@ export default function ReviewModal({ isOpen, onClose, appointmentId, lawyerName
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
-        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-          <h3 className="font-bold text-gray-900 text-lg text-center flex-1">Rate Your Consultation</h3>
-          <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors absolute right-4">
-            <X className="w-5 h-5" />
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/45 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-md animate-in overflow-hidden rounded-2xl border border-border bg-background shadow-xl fade-in zoom-in duration-200">
+        <div className="relative flex items-center justify-between border-b border-border px-6 py-4">
+          <h3 className="flex-1 text-center text-lg font-bold text-foreground">{copy.title}</h3>
+          <button
+            onClick={onClose}
+            className="absolute right-4 rounded-full p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            <X className="h-5 w-5" />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-6">
-           <p className="text-center text-sm text-gray-600 mb-6">
-             How was your experience with <span className="font-semibold text-gray-900">{lawyerName}</span>?
-           </p>
+          <p className="mb-6 text-center text-sm text-muted-foreground">
+            {copy.promptPrefix} <span className="font-semibold text-foreground">{lawyerName}</span>
+            {copy.promptSuffix}
+          </p>
 
-           <div className="flex justify-center gap-2 mb-8">
-             {[1, 2, 3, 4, 5].map((star) => (
-               <button
-                 key={star}
-                 type="button"
-                 onClick={() => setRating(star)}
-                 onMouseEnter={() => setHoverRating(star)}
-                 onMouseLeave={() => setHoverRating(0)}
-                 className={`p-2 transition-all ${
-                   (hoverRating || rating) >= star ? 'text-amber-400 scale-110' : 'text-gray-200 scale-100 hover:text-amber-200'
-                 }`}
-               >
-                 <Star className="w-10 h-10 fill-current" />
-               </button>
-             ))}
-           </div>
+          <div className="mb-8 flex justify-center gap-2">
+            {[1, 2, 3, 4, 5].map((star) => (
+              <button
+                key={star}
+                type="button"
+                onClick={() => setRating(star)}
+                onMouseEnter={() => setHoverRating(star)}
+                onMouseLeave={() => setHoverRating(0)}
+                className={`p-2 transition-all ${
+                  (hoverRating || rating) >= star
+                    ? 'scale-110 text-warning'
+                    : 'scale-100 text-muted-foreground/40 hover:text-warning/60'
+                }`}
+              >
+                <Star className="h-10 w-10 fill-current" />
+              </button>
+            ))}
+          </div>
 
-           <div className="mb-6">
-             <label className="block text-sm font-medium text-gray-700 mb-2">
-               Additional Comments (Optional)
-             </label>
-             <textarea
-               value={comment}
-               onChange={(e) => setComment(e.target.value)}
-               placeholder="Share details of your experience to help others..."
-               className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#1E3A8A] focus:border-transparent resize-none text-sm text-gray-800"
-               rows={4}
-             />
-           </div>
+          <div className="mb-6">
+            <label className="mb-2 block text-sm font-medium text-foreground">{copy.commentsLabel}</label>
+            <textarea
+              value={comment}
+              onChange={(event) => setComment(event.target.value)}
+              placeholder={copy.commentsPlaceholder}
+              className="w-full resize-none rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
+              rows={4}
+            />
+          </div>
 
-           <button
-             type="submit"
-             disabled={isSubmitting || rating === 0}
-             className="w-full bg-[#1E3A8A] text-white font-semibold py-3 px-4 rounded-xl hover:bg-blue-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-sm"
-           >
-             {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
-             {isSubmitting ? 'Submitting...' : 'Submit Review'}
-           </button>
+          <button
+            type="submit"
+            disabled={isSubmitting || rating === 0}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
+            {isSubmitting ? copy.submitting : copy.submit}
+          </button>
         </form>
       </div>
     </div>

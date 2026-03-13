@@ -1,21 +1,34 @@
-"use client"
+'use client';
 
-import * as React from "react"
-import { Moon, Sun } from "lucide-react"
-import { useTheme } from "next-themes"
+import * as React from 'react';
+import { Moon, Sun } from 'lucide-react';
+import { useTheme } from 'next-themes';
+
+import { localizeTreeFromMemory } from '@/lib/content/localized';
+import { useLanguage } from '@/lib/LanguageContext';
 
 export function ThemeToggle() {
-  const { setTheme, theme } = useTheme()
+  const { lang } = useLanguage();
+  const { resolvedTheme, setTheme } = useTheme();
+  const nextTheme = resolvedTheme === 'dark' ? 'light' : 'dark';
+  const copy = localizeTreeFromMemory(
+    {
+      srOnlyToggle: 'Toggle theme',
+      switchTheme: 'Switch theme',
+    } as const,
+    lang
+  );
 
   return (
     <button
-      onClick={() => setTheme(theme === "light" ? "dark" : "light")}
-      className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors relative flex items-center justify-center w-10 h-10 ring-2 ring-transparent focus-visible:ring-[#1E3A8A]"
-      aria-label="Toggle theme"
+      onClick={() => setTheme(nextTheme)}
+      className="relative flex h-10 w-10 items-center justify-center rounded-full border border-border bg-surface text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground focus-visible:ring-2 focus-visible:ring-primary"
+      aria-label={copy.switchTheme}
+      title={copy.switchTheme}
     >
-      <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0 dark:text-amber-400 text-amber-500" />
-      <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100 dark:text-blue-300 text-slate-700" />
-      <span className="sr-only">Toggle theme</span>
+      <Sun className="h-[1.1rem] w-[1.1rem] rotate-0 scale-100 text-warning transition-all dark:-rotate-90 dark:scale-0 dark:text-warning" />
+      <Moon className="absolute h-[1.1rem] w-[1.1rem] rotate-90 scale-0 text-primary transition-all dark:rotate-0 dark:scale-100 dark:text-primary" />
+      <span className="sr-only">{copy.srOnlyToggle}</span>
     </button>
-  )
+  );
 }

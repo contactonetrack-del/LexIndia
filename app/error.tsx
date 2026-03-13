@@ -3,31 +3,43 @@
 import { useEffect } from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 
-export default function Error({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
-    useEffect(() => {
-        console.error(error);
-    }, [error]);
+import { localizeTreeFromMemory } from '@/lib/content/localized';
+import { useLanguage } from '@/lib/LanguageContext';
 
-    return (
-        <div className="min-h-[60vh] flex items-center justify-center px-4">
-            <div className="text-center max-w-md">
-                <div className="flex justify-center mb-4">
-                    <div className="bg-red-100 p-4 rounded-full">
-                        <AlertTriangle className="w-10 h-10 text-red-600" />
-                    </div>
-                </div>
-                <h1 className="text-2xl font-bold text-gray-900 mb-2">Something went wrong</h1>
-                <p className="text-gray-500 mb-6">
-                    An unexpected error occurred. Please try again or contact support if the issue persists.
-                </p>
-                <button
-                    onClick={reset}
-                    className="inline-flex items-center gap-2 bg-[#1E3A8A] text-white px-6 py-3 rounded-xl font-semibold hover:bg-blue-800 transition-colors"
-                >
-                    <RefreshCw className="w-4 h-4" />
-                    Try Again
-                </button>
-            </div>
+export default function Error({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
+  const { lang } = useLanguage();
+
+  useEffect(() => {
+    console.error(error);
+  }, [error]);
+
+  const copy = localizeTreeFromMemory(
+    {
+      title: 'Something went wrong',
+      body: 'An unexpected error occurred. Please try again or contact support if the issue persists.',
+      tryAgain: 'Try again',
+    } as const,
+    lang
+  );
+
+  return (
+    <div className="flex min-h-[60vh] items-center justify-center px-4">
+      <div className="max-w-md text-center">
+        <div className="mb-4 flex justify-center">
+          <div className="rounded-full bg-danger/10 p-4">
+            <AlertTriangle className="h-10 w-10 text-danger" />
+          </div>
         </div>
-    );
+        <h1 className="mb-2 text-2xl font-bold text-foreground">{copy.title}</h1>
+        <p className="mb-6 text-muted-foreground">{copy.body}</p>
+        <button
+          onClick={reset}
+          className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+        >
+          <RefreshCw className="h-4 w-4" />
+          {copy.tryAgain}
+        </button>
+      </div>
+    </div>
+  );
 }

@@ -1,12 +1,35 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Type, Minus, Plus, X } from 'lucide-react';
+import { Type, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
+import { localizeTreeFromMemory } from '@/lib/content/localized';
+import { useLanguage } from '@/lib/LanguageContext';
+
 export default function AccessibilityControls() {
+  const { lang } = useLanguage();
+  const copy = localizeTreeFromMemory(
+    {
+      openAria: 'Open accessibility controls',
+      closeAria: 'Close accessibility controls',
+      title: 'Accessibility',
+      textSize: 'Text Size',
+      normalAria: 'Normal text size',
+      largeAria: 'Large text size',
+      xlAria: 'Extra large text size',
+    } as const,
+    lang
+  );
   const [isOpen, setIsOpen] = useState(false);
-  const [fontSize, setFontSize] = useState<'normal' | 'large' | 'xl'>('normal');
+  const [fontSize, setFontSize] = useState<'normal' | 'large' | 'xl'>(() => {
+    if (typeof window === 'undefined') {
+      return 'normal';
+    }
+
+    const saved = localStorage.getItem('lexindia-text-size');
+    return saved === 'large' || saved === 'xl' ? saved : 'normal';
+  });
 
   const applyFontSize = (size: string) => {
     const root = document.documentElement;
@@ -21,27 +44,21 @@ export default function AccessibilityControls() {
   };
 
   useEffect(() => {
-    const saved = localStorage.getItem('lexindia-text-size');
-    if (saved === 'large' || saved === 'xl') {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setFontSize(saved as any);
-      applyFontSize(saved);
-    }
-  }, []);
+    applyFontSize(fontSize);
+  }, [fontSize]);
 
   const handleSizeChange = (size: 'normal' | 'large' | 'xl') => {
     setFontSize(size);
-    applyFontSize(size);
   };
 
   return (
     <>
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed left-0 top-1/2 -translate-y-1/2 bg-white border border-gray-200 border-l-0 shadow-md p-2 rounded-r-xl z-40 hover:bg-gray-50 transition-colors"
-        aria-label="Open accessibility controls"
+        className="fixed left-0 top-1/2 z-40 -translate-y-1/2 rounded-r-xl border border-border border-l-0 bg-surface p-2 shadow-md transition-colors hover:bg-surface-hover"
+        aria-label={copy.openAria}
       >
-        <Type className="w-5 h-5 text-[#1E3A8A]" />
+        <Type className="w-5 h-5 text-primary" />
       </button>
 
       <AnimatePresence>
@@ -50,16 +67,16 @@ export default function AccessibilityControls() {
             initial={{ x: -300, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: -300, opacity: 0 }}
-            className="fixed left-0 top-1/2 -translate-y-1/2 w-64 bg-white border border-gray-200 shadow-xl rounded-r-2xl z-50 overflow-hidden"
+            className="fixed left-0 top-1/2 z-50 w-64 -translate-y-1/2 overflow-hidden rounded-r-2xl border border-border bg-background shadow-xl"
           >
-            <div className="bg-[#1E3A8A] text-white p-4 flex items-center justify-between">
+            <div className="flex items-center justify-between bg-primary p-4 text-primary-foreground">
               <h3 className="font-bold flex items-center gap-2">
-                <Type className="w-5 h-5" /> Accessibility
+                <Type className="w-5 h-5" /> {copy.title}
               </h3>
               <button 
                 onClick={() => setIsOpen(false)}
-                className="text-white/80 hover:text-white"
-                aria-label="Close accessibility controls"
+                className="text-primary-foreground/80 hover:text-primary-foreground"
+                aria-label={copy.closeAria}
               >
                 <X className="w-5 h-5" />
               </button>
@@ -67,28 +84,28 @@ export default function AccessibilityControls() {
             
             <div className="p-4 space-y-4">
               <div>
-                <p className="text-sm font-semibold text-gray-900 mb-2">Text Size</p>
-                <div className="flex bg-gray-100 rounded-lg p-1">
+                <p className="mb-2 text-sm font-semibold text-foreground">{copy.textSize}</p>
+                <div className="flex rounded-lg bg-muted p-1">
                   <button
                     onClick={() => handleSizeChange('normal')}
-                    className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-colors ${fontSize === 'normal' ? 'bg-white shadow text-[#1E3A8A]' : 'text-gray-600 hover:text-gray-900'}`}
-                    aria-label="Normal text size"
+                    className={`flex-1 rounded-md py-1.5 text-sm font-medium transition-colors ${fontSize === 'normal' ? 'bg-background text-primary shadow' : 'text-muted-foreground hover:text-foreground'}`}
+                    aria-label={copy.normalAria}
                     aria-pressed={fontSize === 'normal'}
                   >
                     Aa
                   </button>
                   <button
                     onClick={() => handleSizeChange('large')}
-                    className={`flex-1 py-1.5 text-base font-medium rounded-md transition-colors ${fontSize === 'large' ? 'bg-white shadow text-[#1E3A8A]' : 'text-gray-600 hover:text-gray-900'}`}
-                    aria-label="Large text size"
+                    className={`flex-1 rounded-md py-1.5 text-base font-medium transition-colors ${fontSize === 'large' ? 'bg-background text-primary shadow' : 'text-muted-foreground hover:text-foreground'}`}
+                    aria-label={copy.largeAria}
                     aria-pressed={fontSize === 'large'}
                   >
                     Aa
                   </button>
                   <button
                     onClick={() => handleSizeChange('xl')}
-                    className={`flex-1 py-1.5 text-lg font-medium rounded-md transition-colors ${fontSize === 'xl' ? 'bg-white shadow text-[#1E3A8A]' : 'text-gray-600 hover:text-gray-900'}`}
-                    aria-label="Extra large text size"
+                    className={`flex-1 rounded-md py-1.5 text-lg font-medium transition-colors ${fontSize === 'xl' ? 'bg-background text-primary shadow' : 'text-muted-foreground hover:text-foreground'}`}
+                    aria-label={copy.xlAria}
                     aria-pressed={fontSize === 'xl'}
                   >
                     Aa

@@ -1,20 +1,51 @@
 import { getServerSession } from 'next-auth';
 import { redirect } from 'next/navigation';
+
 import { authOptions } from '@/lib/auth';
+import { localizeFields, localizeNamedEntity } from '@/lib/i18n/db';
+import { createLocalizedMetadata } from '@/lib/i18n/metadata';
+import { getMessages } from '@/lib/i18n/messages';
+import { withLocalePrefix } from '@/lib/i18n/navigation';
+import { getRequestLocale } from '@/lib/i18n/request';
 import prisma from '@/lib/prisma';
 import LawyerDashboardClient from './LawyerDashboardClient';
 
-export const metadata = { title: 'Lawyer Dashboard | LexIndia' };
+export async function generateMetadata() {
+  const locale = await getRequestLocale();
+  const messages = getMessages(locale);
+  return createLocalizedMetadata({
+    locale,
+    pathname: '/dashboard/lawyer',
+    title: `${messages.dashboard.lawyerPortal} | LexIndia`,
+    description: messages.dashboard.completeProfileDesc,
+  });
+}
 
 export default async function LawyerDashboard() {
+  const locale = await getRequestLocale();
   const session = await getServerSession(authOptions);
-  if (!session) redirect('/');
-  if (session.user.role === 'CITIZEN') redirect('/dashboard/citizen');
+  if (!session) redirect(withLocalePrefix('/', locale));
+  if (session.user.role === 'CITIZEN') redirect(withLocalePrefix('/dashboard/citizen', locale));
 
   const profile = await prisma.lawyerProfile.findFirst({
     where: { userId: session.user.id },
-    include: { specializations: true, languages: true, modes: true },
+    include: {
+      translations: true,
+      specializations: { include: { translations: true } },
+      languages: { include: { translations: true } },
+      modes: true,
+    },
   });
 
-  return <LawyerDashboardClient user={session.user} profile={profile} />;
+  const localizedProfile = profile
+    ? {
+        ...localizeFields(profile, profile.translations, locale, ['bio']),
+        specializations: profile.specializations.map((specialization) =>
+          localizeNamedEntity(specialization, locale)
+        ),
+        languages: profile.languages.map((language) => localizeNamedEntity(language, locale)),
+      }
+    : null;
+
+  return <LawyerDashboardClient user={session.user} profile={localizedProfile} />;
 }

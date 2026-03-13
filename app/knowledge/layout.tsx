@@ -1,18 +1,22 @@
 import type { Metadata } from 'next';
-import LegalDisclaimer from '@/components/LegalDisclaimer';
 
-export const metadata: Metadata = {
-  title: 'Legal Knowledge Base — FAQs & Guides | LexIndia',
-  description: 'India\'s legal FAQ library — plain-language answers to common legal questions on criminal law, property, family, consumer rights, employment, and more. Reviewed by verified lawyers.',
-  keywords: ['legal FAQ India', 'legal questions India', 'know your rights', 'Indian law explained', 'legal information India'],
-  alternates: { canonical: '/knowledge' },
-  openGraph: {
-    title: 'Legal Knowledge Base — FAQs & Guides | LexIndia',
-    description: 'Plain-language answers to common Indian legal questions, reviewed by verified lawyers.',
-    url: '/knowledge',
-    type: 'website',
-  },
-};
+import LegalDisclaimer from '@/components/LegalDisclaimer';
+import { createLocalizedMetadata } from '@/lib/i18n/metadata';
+import { getMessages } from '@/lib/i18n/messages';
+import { getRequestLocale } from '@/lib/i18n/request';
+
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getRequestLocale();
+  const messages = getMessages(locale);
+
+  return createLocalizedMetadata({
+    locale,
+    pathname: '/knowledge',
+    title: `${messages.knowledge.title} | LexIndia`,
+    description: messages.knowledge.subtitle,
+    keywords: [messages.nav.knowledge, messages.knowledge.categories, messages.knowledge.popular],
+  });
+}
 
 export default function KnowledgeLayout({ children }: { children: React.ReactNode }) {
   return (

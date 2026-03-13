@@ -1,17 +1,21 @@
 import type { Metadata } from 'next';
 
-export const metadata: Metadata = {
-  title: 'Find Verified Lawyers in India | LexIndia',
-  description: 'Search and connect with verified lawyers across India. Filter by specialization, city, consultation mode (video, call, chat), language, and fee. All lawyers are Bar Council verified.',
-  keywords: ['find lawyer India', 'verified lawyers', 'online legal consultation', 'Bar Council lawyer', 'advocate near me', 'criminal lawyer India', 'family lawyer India'],
-  alternates: { canonical: '/lawyers' },
-  openGraph: {
-    title: 'Find Verified Lawyers in India | LexIndia',
-    description: 'Search verified advocates across India by city, specialization, and consultation mode.',
-    url: '/lawyers',
-    type: 'website',
-  },
-};
+import { createLocalizedMetadata } from '@/lib/i18n/metadata';
+import { getMessages } from '@/lib/i18n/messages';
+import { getRequestLocale } from '@/lib/i18n/request';
+
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getRequestLocale();
+  const messages = getMessages(locale);
+
+  return createLocalizedMetadata({
+    locale,
+    pathname: '/lawyers',
+    title: `${messages.lawyersPage.title} | LexIndia`,
+    description: messages.lawyersPage.subtitle,
+    keywords: [messages.nav.lawyers, messages.lawyersPage.filters, messages.lawyersPage.bookConsultation],
+  });
+}
 
 export default function LawyersLayout({ children }: { children: React.ReactNode }) {
   return <>{children}</>;

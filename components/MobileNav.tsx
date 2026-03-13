@@ -1,57 +1,66 @@
 'use client';
 
 import React from 'react';
-import Link from 'next/link';
+import { BookOpen, Home, Search, User } from 'lucide-react';
 import { usePathname } from 'next/navigation';
-import { Home, Search, BookOpen, User } from 'lucide-react';
-import { useAuth } from '@/lib/AuthContext';
 import { useSession } from 'next-auth/react';
+
+import LocaleLink from '@/components/LocaleLink';
+import { getLocalizedText } from '@/lib/content/localized';
+import { shellCopy } from '@/lib/content/public-ui';
+import { useAuth } from '@/lib/AuthContext';
+import { useLanguage } from '@/lib/LanguageContext';
+import { getPathWithoutLocale } from '@/lib/i18n/navigation';
 
 export default function MobileNav() {
   const pathname = usePathname();
   const { openAuthModal } = useAuth();
   const { data: session } = useSession();
+  const { fontClass, lang, t } = useLanguage();
+
   const userRole = session?.user?.role?.toLowerCase() ?? null;
+  const currentPath = getPathWithoutLocale(pathname || '/');
+  const homeLabel = getLocalizedText(shellCopy.home, lang);
 
   const navItems = [
-    { name: 'Home', href: '/', icon: Home },
-    { name: 'Lawyers', href: '/lawyers', icon: Search },
-    { name: 'Rights', href: '/knowledge', icon: BookOpen },
+    { name: homeLabel, href: '/', icon: Home },
+    { name: t.nav.lawyers, href: '/lawyers', icon: Search },
+    { name: t.nav.rights, href: '/rights', icon: BookOpen },
   ];
 
   return (
-    <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-40 pb-safe">
-      <div className="flex justify-around items-center h-16">
+    <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-background/95 pb-safe backdrop-blur md:hidden">
+      <div className="flex h-16 items-center justify-around">
         {navItems.map((item) => {
-          const isActive = pathname === item.href;
+          const isActive = currentPath === item.href;
           const Icon = item.icon;
           return (
-            <Link
+            <LocaleLink
               key={item.name}
               href={item.href}
-              className={`flex flex-col items-center justify-center w-full h-full space-y-1 ${isActive ? 'text-[#1E3A8A]' : 'text-gray-500 hover:text-gray-900'}`}
+              className={`flex h-full w-full flex-col items-center justify-center space-y-1 ${isActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
             >
-              <Icon className={`w-5 h-5 ${isActive ? 'fill-blue-50' : ''}`} />
-              <span className="text-[10px] font-medium">{item.name}</span>
-            </Link>
+              <Icon className={`h-5 w-5 ${isActive ? 'fill-primary/10' : ''}`} />
+              <span className={`text-[10px] font-medium ${fontClass}`}>{item.name}</span>
+            </LocaleLink>
           );
         })}
 
         {userRole ? (
-          <Link
+          <LocaleLink
             href={`/dashboard/${userRole}`}
-            className={`flex flex-col items-center justify-center w-full h-full space-y-1 ${pathname.includes('/dashboard') ? 'text-[#1E3A8A]' : 'text-gray-500 hover:text-gray-900'}`}
+            className={`flex h-full w-full flex-col items-center justify-center space-y-1 ${currentPath.startsWith('/dashboard') ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
           >
-            <User className={`w-5 h-5 ${pathname.includes('/dashboard') ? 'fill-blue-50' : ''}`} />
-            <span className="text-[10px] font-medium">Profile</span>
-          </Link>
+            <User className={`h-5 w-5 ${currentPath.startsWith('/dashboard') ? 'fill-primary/10' : ''}`} />
+            <span className={`text-[10px] font-medium ${fontClass}`}>{t.dashboard.title}</span>
+          </LocaleLink>
         ) : (
           <button
             onClick={() => openAuthModal()}
-            className="flex flex-col items-center justify-center w-full h-full space-y-1 text-gray-500 hover:text-gray-900"
+            className="flex h-full w-full flex-col items-center justify-center space-y-1 text-muted-foreground transition-colors hover:text-foreground"
           >
-            <User className="w-5 h-5" />
-            <span className="text-[10px] font-medium">Login</span>
+            <User className="h-5 w-5" />
+            <span className={`text-[10px] font-medium ${fontClass}`}>{t.nav.login}</span>
           </button>
         )}
       </div>

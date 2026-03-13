@@ -1,16 +1,18 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
+
 import { authOptions } from '@/lib/auth';
+import { getApiLocalizedText } from '@/lib/i18n/api';
 import prisma from '@/lib/prisma';
 
 export async function GET(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id || session.user.role !== 'LAWYER') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: getApiLocalizedText(request, 'Unauthorized') }, { status: 401 });
     }
 
     const { id } = await params; // Appointment ID
@@ -20,7 +22,7 @@ export async function GET(
     });
 
     if (!appointment) {
-      return NextResponse.json({ error: 'Appointment not found' }, { status: 404 });
+      return NextResponse.json({ error: getApiLocalizedText(request, 'Appointment not found') }, { status: 404 });
     }
 
     // Only the assigned lawyer can view notes
@@ -30,7 +32,7 @@ export async function GET(
            where: { userId: session.user.id }
        });
        if (appointment.lawyerId !== lawyerProfile?.id) {
-           return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+           return NextResponse.json({ error: getApiLocalizedText(request, 'Unauthorized') }, { status: 403 });
        }
     }
 
@@ -43,20 +45,20 @@ export async function GET(
   } catch (error) {
     console.error('Error fetching case notes:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch notes' },
+      { error: getApiLocalizedText(request, 'Failed to fetch notes') },
       { status: 500 }
     );
   }
 }
 
 export async function POST(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id || session.user.role !== 'LAWYER') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: getApiLocalizedText(request, 'Unauthorized') }, { status: 401 });
     }
 
     const { id } = await params;
@@ -64,7 +66,7 @@ export async function POST(
     const { text } = body;
 
     if (!text || typeof text !== 'string') {
-      return NextResponse.json({ error: 'Invalid note text' }, { status: 400 });
+      return NextResponse.json({ error: getApiLocalizedText(request, 'Invalid note text') }, { status: 400 });
     }
 
     // Validate ownership
@@ -73,7 +75,7 @@ export async function POST(
     });
 
     if (!lawyerProfile) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+        return NextResponse.json({ error: getApiLocalizedText(request, 'Unauthorized') }, { status: 403 });
     }
 
     const appointment = await prisma.appointment.findUnique({
@@ -81,7 +83,10 @@ export async function POST(
     });
 
     if (!appointment || appointment.lawyerId !== lawyerProfile.id) {
-      return NextResponse.json({ error: 'Appointment not found or unauthorized' }, { status: 404 });
+      return NextResponse.json(
+        { error: getApiLocalizedText(request, 'Appointment not found or unauthorized') },
+        { status: 404 }
+      );
     }
 
     const note = await prisma.caseNote.create({
@@ -96,7 +101,7 @@ export async function POST(
   } catch (error) {
     console.error('Error creating case note:', error);
     return NextResponse.json(
-      { error: 'Failed to save note' },
+      { error: getApiLocalizedText(request, 'Failed to save note') },
       { status: 500 }
     );
   }

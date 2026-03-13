@@ -1,18 +1,22 @@
 import type { Metadata } from 'next';
-import LegalDisclaimer from '@/components/LegalDisclaimer';
 
-export const metadata: Metadata = {
-  title: 'Free Legal Document Templates India | LexIndia',
-  description: 'Download free legal document templates for India — rent agreements, legal notices, affidavits, employee agreements, and more. Drafted in compliance with Indian law.',
-  keywords: ['legal templates India', 'free legal documents', 'rent agreement template', 'legal notice template', 'affidavit template India', 'Indian legal forms'],
-  alternates: { canonical: '/templates' },
-  openGraph: {
-    title: 'Free Legal Document Templates India | LexIndia',
-    description: 'Download free Indian legal document templates: rent agreements, notices, affidavits, and more.',
-    url: '/templates',
-    type: 'website',
-  },
-};
+import LegalDisclaimer from '@/components/LegalDisclaimer';
+import { createLocalizedMetadata } from '@/lib/i18n/metadata';
+import { getMessages } from '@/lib/i18n/messages';
+import { getRequestLocale } from '@/lib/i18n/request';
+
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getRequestLocale();
+  const messages = getMessages(locale);
+
+  return createLocalizedMetadata({
+    locale,
+    pathname: '/templates',
+    title: `${messages.templates.title} | LexIndia`,
+    description: messages.templates.subtitle,
+    keywords: [messages.nav.templates, messages.templates.category, messages.templates.downloadBtn],
+  });
+}
 
 export default function TemplatesLayout({ children }: { children: React.ReactNode }) {
   return (

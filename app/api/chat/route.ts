@@ -1,20 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
+
 import { authOptions } from '@/lib/auth';
+import { getApiLocalizedText } from '@/lib/i18n/api';
 import prisma from '@/lib/prisma';
 
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: getApiLocalizedText(req, 'Unauthorized') }, { status: 401 });
     }
 
     const { searchParams } = new URL(req.url);
     const appointmentId = searchParams.get('appointmentId');
 
     if (!appointmentId) {
-      return NextResponse.json({ error: 'Missing appointmentId' }, { status: 400 });
+      return NextResponse.json({ error: getApiLocalizedText(req, 'Missing appointmentId') }, { status: 400 });
     }
 
     // Secure checking: either citizen or lawyer on that appointment
@@ -24,11 +26,14 @@ export async function GET(req: NextRequest) {
     });
 
     if (!appointment) {
-      return NextResponse.json({ error: 'Appointment not found' }, { status: 404 });
+      return NextResponse.json({ error: getApiLocalizedText(req, 'Appointment not found') }, { status: 404 });
     }
 
     if (appointment.citizenId !== session.user.id && appointment.lawyer.userId !== session.user.id) {
-      return NextResponse.json({ error: 'Unauthorized to view these messages' }, { status: 403 });
+      return NextResponse.json(
+        { error: getApiLocalizedText(req, 'Unauthorized to view these messages') },
+        { status: 403 }
+      );
     }
 
     const messages = await prisma.message.findMany({
@@ -48,7 +53,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ success: true, messages });
   } catch (error) {
     console.error('Fetch Messages Error:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json({ error: getApiLocalizedText(req, 'Internal Server Error') }, { status: 500 });
   }
 }
 
@@ -56,14 +61,14 @@ export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: getApiLocalizedText(req, 'Unauthorized') }, { status: 401 });
     }
 
     const body = await req.json();
     const { text, appointmentId, fileUrl, fileName } = body;
 
     if (!appointmentId || (!text && !fileUrl)) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+      return NextResponse.json({ error: getApiLocalizedText(req, 'Missing required fields') }, { status: 400 });
     }
 
     const appointment = await prisma.appointment.findUnique({
@@ -71,13 +76,18 @@ export async function POST(req: NextRequest) {
       include: { lawyer: true },
     });
 
-    if (!appointment) return NextResponse.json({ error: 'Appointment not found' }, { status: 404 });
+    if (!appointment) {
+      return NextResponse.json({ error: getApiLocalizedText(req, 'Appointment not found') }, { status: 404 });
+    }
 
     const isCitizen = appointment.citizenId === session.user.id;
     const isLawyer = appointment.lawyer.userId === session.user.id;
 
     if (!isCitizen && !isLawyer) {
-      return NextResponse.json({ error: 'Unauthorized to send message' }, { status: 403 });
+      return NextResponse.json(
+        { error: getApiLocalizedText(req, 'Unauthorized to send message') },
+        { status: 403 }
+      );
     }
 
     const receiverId = isCitizen ? appointment.lawyer.userId : appointment.citizenId;
@@ -96,6 +106,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, message });
   } catch (error) {
     console.error('Send Message Error:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json({ error: getApiLocalizedText(req, 'Internal Server Error') }, { status: 500 });
   }
 }

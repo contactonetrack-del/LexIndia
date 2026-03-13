@@ -1,13 +1,33 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
-  Scale, FileText, Calendar, BookOpen, User, LogOut,
-  Clock, Video, Phone, MessageSquare, ChevronRight, Loader2,
-  CheckCircle, XCircle, AlertCircle, MapPin, Star
+  Scale,
+  FileText,
+  Calendar,
+  BookOpen,
+  User,
+  LogOut,
+  Clock,
+  Video,
+  Phone,
+  MessageSquare,
+  ChevronRight,
+  Loader2,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  MapPin,
+  Star,
+  type LucideIcon,
 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
+
+import LocaleLink from '@/components/LocaleLink';
+import { localizeTreeFromMemory } from '@/lib/content/localized';
+import { formatDate, formatNumber, formatTime } from '@/lib/i18n/format';
+import type { Locale } from '@/lib/i18n/config';
 import { useLanguage } from '@/lib/LanguageContext';
 import { getTranslation } from '@/lib/translations';
 import ReviewModal from '@/components/dashboard/ReviewModal';
@@ -30,243 +50,446 @@ interface Appointment {
   };
 }
 
-const MODE_ICONS: Record<string, React.ReactNode> = {
-  VIDEO: <Video className="w-4 h-4" />,
-  CALL: <Phone className="w-4 h-4" />,
-  CHAT: <MessageSquare className="w-4 h-4" />,
+type AppointmentCardCopy = {
+  pending: string;
+  confirmed: string;
+  completed: string;
+  cancelled: string;
+  modeVideo: string;
+  modeCall: string;
+  modeChat: string;
+  legalExpert: string;
+  profile: string;
+  invoice: string;
+  messageWorkspace: string;
+  joinVideoCall: string;
+  leaveReview: string;
 };
 
-const STATUS_CONFIG: Record<string, { label: string; className: string; icon: React.ReactNode }> = {
-  PENDING: {
-    label: 'Pending',
-    className: 'bg-amber-50 text-amber-700 border-amber-200',
-    icon: <AlertCircle className="w-3.5 h-3.5" />,
-  },
-  CONFIRMED: {
-    label: 'Confirmed',
-    className: 'bg-green-50 text-green-700 border-green-200',
-    icon: <CheckCircle className="w-3.5 h-3.5" />,
-  },
-  COMPLETED: {
-    label: 'Completed',
-    className: 'bg-blue-50 text-blue-700 border-blue-200',
-    icon: <CheckCircle className="w-3.5 h-3.5" />,
-  },
-  CANCELLED: {
-    label: 'Cancelled',
-    className: 'bg-gray-100 text-gray-500 border-gray-200 line-through',
-    icon: <XCircle className="w-3.5 h-3.5" />,
-  },
+const MODE_ICON_COMPONENTS: Record<string, LucideIcon> = {
+  VIDEO: Video,
+  CALL: Phone,
+  CHAT: MessageSquare,
 };
 
-function AppointmentCard({ appt, onReviewClick }: { appt: Appointment; onReviewClick?: () => void }) {
-  const date = new Date(appt.date);
-  const isUpcoming = date > new Date() && appt.status !== 'CANCELLED';
-  const status = STATUS_CONFIG[appt.status] ?? STATUS_CONFIG['PENDING'];
+const STATUS_CLASSES: Record<string, string> = {
+  PENDING: 'border-warning/30 bg-warning/10 text-warning',
+  CONFIRMED: 'border-success/30 bg-success/10 text-success',
+  COMPLETED: 'border-primary/30 bg-primary/10 text-primary',
+  CANCELLED: 'border-border bg-muted text-muted-foreground',
+};
 
-  const hasInvoice = appt.amount !== null && appt.amount! > 0 && (appt.status === 'CONFIRMED' || appt.status === 'COMPLETED' || appt.paymentStatus === 'PAID');
-  const needsReview = appt.status === 'COMPLETED' && !appt.review;
+function AppointmentCard({
+  appointment,
+  copy,
+  lang,
+  onReviewClick,
+}: {
+  appointment: Appointment;
+  copy: AppointmentCardCopy;
+  lang: Locale;
+  onReviewClick?: () => void;
+}) {
+  const date = new Date(appointment.date);
+  const isUpcoming = date > new Date() && appointment.status !== 'CANCELLED';
+  const statusClassName = STATUS_CLASSES[appointment.status] ?? STATUS_CLASSES.PENDING;
+
+  const statusLabelByCode: Record<string, string> = {
+    PENDING: copy.pending,
+    CONFIRMED: copy.confirmed,
+    COMPLETED: copy.completed,
+    CANCELLED: copy.cancelled,
+  };
+
+  const statusLabel = statusLabelByCode[appointment.status] ?? copy.pending;
+  const hasInvoice =
+    appointment.amount !== null &&
+    appointment.amount !== undefined &&
+    appointment.amount > 0 &&
+    (appointment.status === 'CONFIRMED' ||
+      appointment.status === 'COMPLETED' ||
+      appointment.paymentStatus === 'PAID');
+
+  const needsReview = appointment.status === 'COMPLETED' && !appointment.review;
+  const ModeIcon = MODE_ICON_COMPONENTS[appointment.mode] ?? MessageSquare;
+  const modeLabel =
+    appointment.mode === 'VIDEO'
+      ? copy.modeVideo
+      : appointment.mode === 'CALL'
+        ? copy.modeCall
+        : appointment.mode === 'CHAT'
+          ? copy.modeChat
+          : appointment.mode;
 
   return (
-    <div className={`bg-white rounded-xl border p-4 flex gap-4 ${isUpcoming ? 'border-[#1E3A8A]/20 shadow-sm' : 'border-gray-100'}`}>
-      {/* Avatar */}
-      <div className="w-12 h-12 rounded-xl overflow-hidden bg-[#1E3A8A] flex items-center justify-center shrink-0 relative">
-        {appt.lawyer.user.image ? (
-          <Image src={appt.lawyer.user.image} alt={appt.lawyer.user.name ?? 'Lawyer'} fill className="object-cover" referrerPolicy="no-referrer" />
+    <div
+      className={`flex gap-4 rounded-xl border p-4 ${
+        isUpcoming ? 'border-primary/20 bg-background shadow-sm' : 'border-border bg-background'
+      }`}
+    >
+      <div className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-primary text-primary-foreground">
+        {appointment.lawyer.user.image ? (
+          <Image
+            src={appointment.lawyer.user.image}
+            alt={appointment.lawyer.user.name ?? copy.legalExpert}
+            fill
+            className="object-cover"
+            referrerPolicy="no-referrer"
+          />
         ) : (
-          <span className="text-white font-bold text-lg">{(appt.lawyer.user.name ?? 'L')[0]}</span>
+          <span className="text-lg font-bold">{(appointment.lawyer.user.name ?? copy.legalExpert)[0]}</span>
         )}
       </div>
 
-      {/* Info */}
-      <div className="flex-1 min-w-0">
+      <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-2">
-          <h4 className="font-semibold text-gray-900 text-sm truncate">{appt.lawyer.user.name}</h4>
-          <span className={`flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full border shrink-0 ${status.className}`}>
-            {status.icon} {status.label}
+          <h4 className="truncate text-sm font-semibold text-foreground">{appointment.lawyer.user.name}</h4>
+          <span className={`flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium ${statusClassName}`}>
+            <span className="h-3.5 w-3.5">
+              {appointment.status === 'CANCELLED' ? <XCircle className="h-3.5 w-3.5" /> : null}
+              {appointment.status === 'PENDING' ? <AlertCircle className="h-3.5 w-3.5" /> : null}
+              {(appointment.status === 'CONFIRMED' || appointment.status === 'COMPLETED') ? (
+                <CheckCircle className="h-3.5 w-3.5" />
+              ) : null}
+            </span>
+            {statusLabel}
           </span>
         </div>
-        <p className="text-xs text-gray-500 mb-2">{appt.lawyer.specializations[0]?.name ?? 'Legal Expert'}</p>
-        <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
-          <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" />
-            {date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} · {date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+
+        <p className="mb-2 text-xs text-muted-foreground">
+          {appointment.lawyer.specializations[0]?.name ?? copy.legalExpert}
+        </p>
+
+        <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+          <span className="flex items-center gap-1">
+            <Clock className="h-3.5 w-3.5" />
+            {formatDate(date, lang, { day: 'numeric', month: 'short', year: 'numeric' })}
+            {' · '}
+            {formatTime(date, lang, { hour: '2-digit', minute: '2-digit' })}
           </span>
-          <span className="flex items-center gap-1">{MODE_ICONS[appt.mode]} {appt.mode}</span>
-          <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" />{appt.lawyer.city}</span>
+          <span className="flex items-center gap-1">
+            <ModeIcon className="h-3.5 w-3.5" />
+            {modeLabel}
+          </span>
+          <span className="flex items-center gap-1">
+            <MapPin className="h-3.5 w-3.5" />
+            {appointment.lawyer.city}
+          </span>
         </div>
       </div>
 
-      <div className="flex flex-col justify-center items-end gap-2 shrink-0">
-         <Link
-           href={`/lawyers/${appt.lawyer.id}`}
-           className="text-[#1E3A8A] border border-[#1E3A8A]/30 hover:bg-[#1E3A8A]/5 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors"
-           aria-label="View lawyer profile"
-         >
-           Profile <ChevronRight className="w-3 h-3" />
-         </Link>
+      <div className="flex shrink-0 flex-col items-end justify-center gap-2">
+        <LocaleLink
+          href={`/lawyers/${appointment.lawyer.id}`}
+          className="flex items-center gap-1 rounded-lg border border-primary/25 px-3 py-1.5 text-xs font-semibold text-primary transition-colors hover:bg-primary/5"
+          aria-label={copy.profile}
+        >
+          {copy.profile}
+          <ChevronRight className="h-3 w-3" />
+        </LocaleLink>
 
-         {hasInvoice && (
-           <Link
-             href={`/dashboard/invoice/${appt.id}`}
-             target="_blank"
-             className="text-emerald-700 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors"
-             aria-label="View Invoice"
-           >
-             <FileText className="w-3 h-3" /> Invoice
-           </Link>
-         )}
+        {hasInvoice ? (
+          <LocaleLink
+            href={`/dashboard/invoice/${appointment.id}`}
+            target="_blank"
+            className="flex items-center gap-1 rounded-lg border border-success/30 bg-success/10 px-3 py-1.5 text-xs font-semibold text-success transition-colors hover:bg-success/15"
+            aria-label={copy.invoice}
+          >
+            <FileText className="h-3 w-3" />
+            {copy.invoice}
+          </LocaleLink>
+        ) : null}
 
-         <Link
-           href={`/dashboard/chat/${appt.id}`}
-           className="flex items-center gap-1.5 text-xs font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-lg transition-colors border border-gray-200"
-         >
-           <MessageSquare className="w-3.5 h-3.5" /> Message Workspace
-         </Link>
+        <LocaleLink
+          href={`/dashboard/chat/${appointment.id}`}
+          className="flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-surface-hover"
+        >
+          <MessageSquare className="h-3.5 w-3.5" />
+          {copy.messageWorkspace}
+        </LocaleLink>
 
-         {appt.status === 'CONFIRMED' && appt.mode === 'VIDEO' && (
-           <Link
-             href={`/dashboard/room/${appt.id}`}
-             className="flex items-center gap-1.5 text-xs font-semibold bg-blue-50 text-[#1E3A8A] border border-blue-100 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition-colors"
-           >
-             <Video className="w-3.5 h-3.5" /> Join Video Call
-           </Link>
-         )}
+        {appointment.status === 'CONFIRMED' && appointment.mode === 'VIDEO' ? (
+          <LocaleLink
+            href={`/dashboard/room/${appointment.id}`}
+            className="flex items-center gap-1.5 rounded-lg border border-primary/25 bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary transition-colors hover:bg-primary/15"
+          >
+            <Video className="h-3.5 w-3.5" />
+            {copy.joinVideoCall}
+          </LocaleLink>
+        ) : null}
 
-         {needsReview && onReviewClick && (
-           <button
-             onClick={onReviewClick}
-             className="flex items-center gap-1.5 text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200 px-3 py-1.5 rounded-lg hover:bg-amber-100 transition-colors shadow-sm"
-           >
-             <Star className="w-3.5 h-3.5 fill-current" /> Leave a Review
-           </button>
-         )}
+        {needsReview && onReviewClick ? (
+          <button
+            onClick={onReviewClick}
+            className="flex items-center gap-1.5 rounded-lg border border-warning/30 bg-warning/10 px-3 py-1.5 text-xs font-semibold text-warning transition-colors hover:bg-warning/15"
+          >
+            <Star className="h-3.5 w-3.5 fill-current" />
+            {copy.leaveReview}
+          </button>
+        ) : null}
       </div>
     </div>
   );
 }
 
-export default function CitizenDashboardClient({ user }: { user: { name?: string | null; email?: string | null } }) {
-  const { lang, isIndic } = useLanguage();
+export default function CitizenDashboardClient({
+  user,
+}: {
+  user: { name?: string | null; email?: string | null };
+}) {
+  const { lang, fontClass } = useLanguage();
   const t = getTranslation(lang);
 
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [apptLoading, setApptLoading] = useState(true);
-  
-  // Review Modal State
   const [reviewAppt, setReviewAppt] = useState<{ id: string; name: string } | null>(null);
 
-  const fetchAppointments = () => {
-    fetch('/api/appointments')
-      .then(r => r.json())
-      .then(d => setAppointments(d.appointments ?? []))
+  const fetchAppointments = useCallback(() => {
+    fetch(`/api/appointments?locale=${lang}`)
+      .then((response) => response.json())
+      .then((data) => setAppointments(data.appointments ?? []))
       .catch(() => setAppointments([]))
       .finally(() => setApptLoading(false));
-  };
+  }, [lang]);
 
   useEffect(() => {
     fetchAppointments();
-  }, []);
+  }, [fetchAppointments]);
 
-  const upcoming = appointments.filter(a => new Date(a.date) > new Date() && a.status !== 'CANCELLED');
-  const past = appointments.filter(a => new Date(a.date) <= new Date() || a.status === 'CANCELLED');
+  const UPCOMING_STATUSES = new Set(['PENDING', 'CONFIRMED']);
+  const upcoming = appointments.filter((appointment) => UPCOMING_STATUSES.has(appointment.status));
+  const past = appointments.filter((appointment) => !UPCOMING_STATUSES.has(appointment.status));
+
+  const localizedCopy = localizeTreeFromMemory({
+    bookNew: 'Book new',
+    noAppointmentsBody:
+      'Book your first consultation with a verified lawyer to get personalized legal advice.',
+    findVerifiedLawyer: 'Find a verified lawyer',
+    pending: 'Pending',
+    confirmed: 'Confirmed',
+    completed: 'Completed',
+    cancelled: 'Cancelled',
+    modeVideo: 'Video',
+    modeCall: 'Call',
+    modeChat: 'Chat',
+    legalExpert: 'Legal expert',
+    profile: 'Profile',
+    invoice: 'Invoice',
+    messageWorkspace: 'Message workspace',
+    joinVideoCall: 'Join video call',
+    leaveReview: 'Leave a review',
+  } as const, lang);
+
+  const copy = {
+    legalGuides: t.nav.knowledge,
+    legalGuidesDescription: t.knowledge.subtitle,
+    myBookings: t.dashboard.myAppointments,
+    upcomingCount: `${formatNumber(upcoming.length, lang)} ${t.dashboard.upcoming.toLowerCase()}`,
+    myAppointments: t.dashboard.myAppointments,
+    bookNew: localizedCopy.bookNew,
+    noAppointmentsTitle: t.dashboard.noAppointments,
+    noAppointmentsBody: localizedCopy.noAppointmentsBody,
+    findVerifiedLawyer: localizedCopy.findVerifiedLawyer,
+    upcomingHeading: t.dashboard.upcoming,
+    pastHeading: `${t.dashboard.past} & ${localizedCopy.cancelled}`,
+    pending: localizedCopy.pending,
+    confirmed: localizedCopy.confirmed,
+    completed: localizedCopy.completed,
+    cancelled: localizedCopy.cancelled,
+    modeVideo: localizedCopy.modeVideo,
+    modeCall: localizedCopy.modeCall,
+    modeChat: localizedCopy.modeChat,
+    legalExpert: localizedCopy.legalExpert,
+    profile: localizedCopy.profile,
+    invoice: localizedCopy.invoice,
+    messageWorkspace: localizedCopy.messageWorkspace,
+    joinVideoCall: localizedCopy.joinVideoCall,
+    leaveReview: localizedCopy.leaveReview,
+  } as const;
+  const quickActions = [
+    {
+      icon: Scale,
+      label: t.dashboard.findLawyer,
+      href: '/lawyers',
+      description: t.dashboard.findLawyerDesc,
+      isAnchor: false,
+    },
+    {
+      icon: BookOpen,
+      label: copy.legalGuides,
+      href: '/guides',
+      description: copy.legalGuidesDescription,
+      isAnchor: false,
+    },
+    {
+      icon: FileText,
+      label: t.dashboard.legalTemplates,
+      href: '/templates',
+      description: t.dashboard.legalTemplatesDesc,
+      isAnchor: false,
+    },
+    {
+      icon: Calendar,
+      label: copy.myBookings,
+      href: '#my-appointments',
+      description: copy.upcomingCount,
+      isAnchor: true,
+    },
+  ] as const;
+  const renderQuickAction = ({
+    icon: Icon,
+    label,
+    href,
+    description,
+    isAnchor,
+  }: (typeof quickActions)[number]) => {
+    const card = (
+      <>
+        <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary transition-transform group-hover:scale-105">
+          <Icon className="h-6 w-6" />
+        </div>
+        <h3 className="text-sm font-semibold text-foreground">{label}</h3>
+        <p className="mt-1 text-xs text-muted-foreground">{description}</p>
+      </>
+    );
+
+    if (isAnchor) {
+      return (
+        <Link
+          key={`${label}-${href}`}
+          href={href}
+          className={`group rounded-2xl border border-border bg-background p-5 transition-all hover:shadow-md ${fontClass}`}
+        >
+          {card}
+        </Link>
+      );
+    }
+
+    return (
+      <LocaleLink
+        key={`${label}-${href}`}
+        href={href}
+        className={`group rounded-2xl border border-border bg-background p-5 transition-all hover:shadow-md ${fontClass}`}
+      >
+        {card}
+      </LocaleLink>
+    );
+  };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-[#1E3A8A] to-blue-700 text-white">
-        <div className="max-w-6xl mx-auto px-4 py-8">
+    <div className="min-h-screen bg-muted">
+      <div className="bg-gradient-to-r from-primary to-accent/70 text-primary-foreground">
+        <div className="mx-auto max-w-6xl px-4 py-8">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="w-14 h-14 bg-white/20 rounded-full flex items-center justify-center">
-                <User className="w-7 h-7" />
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary-foreground/15">
+                <User className="h-7 w-7" />
               </div>
-              <div className={isIndic ? 'font-hindi' : ''}>
-                <p className="text-blue-200 text-sm">{t.dashboard.welcome},</p>
+              <div className={fontClass}>
+                <p className="text-sm text-primary-foreground/85">{t.dashboard.welcome},</p>
                 <h1 className="text-2xl font-bold">{user.name}</h1>
-                <p className="text-blue-200 text-sm">{user.email}</p>
+                <p className="text-sm text-primary-foreground/85">{user.email}</p>
               </div>
             </div>
             <Link
               href="/api/auth/signout"
-              className={`flex items-center gap-2 text-white/80 hover:text-white transition-colors text-sm ${isIndic ? 'font-hindi' : ''}`}
+              className={`flex items-center gap-2 text-sm text-primary-foreground/85 transition-colors hover:text-primary-foreground ${fontClass}`}
             >
-              <LogOut className="w-4 h-4" /> {t.dashboard.signOut}
+              <LogOut className="h-4 w-4" />
+              {t.dashboard.signOut}
             </Link>
           </div>
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        {/* Quick Actions */}
-        <h2 className={`text-xl font-bold text-gray-900 mb-4 ${isIndic ? 'font-hindi' : ''}`}>{t.dashboard.quickActions}</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-10">
-          {[
-            { icon: Scale, label: t.dashboard.findLawyer, href: '/lawyers', color: 'bg-blue-500', desc: t.dashboard.findLawyerDesc },
-            { icon: BookOpen, label: 'Legal Guides', href: '/guides', color: 'bg-emerald-500', desc: 'Free plain-language guides' },
-            { icon: FileText, label: t.dashboard.legalTemplates, href: '/templates', color: 'bg-amber-500', desc: t.dashboard.legalTemplatesDesc },
-            { icon: Calendar, label: 'My Bookings', href: '#my-appointments', color: 'bg-purple-500', desc: `${upcoming.length} upcoming` },
-          ].map(({ icon: Icon, label, href, color, desc }) => (
-            <Link key={label} href={href}
-              className={`bg-white rounded-2xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition-all group ${isIndic ? 'font-hindi' : ''}`}
-            >
-              <div className={`w-12 h-12 ${color} rounded-xl flex items-center justify-center mb-3 group-hover:scale-105 transition-transform`}>
-                <Icon className="w-6 h-6 text-white" />
-              </div>
-              <h3 className="font-semibold text-gray-900 text-sm">{label}</h3>
-              <p className="text-gray-500 text-xs mt-1">{desc}</p>
-            </Link>
-          ))}
+      <div className="mx-auto max-w-6xl px-4 py-8">
+        <h2 className={`mb-4 text-xl font-bold text-foreground ${fontClass}`}>{t.dashboard.quickActions}</h2>
+        <div className="mb-10 grid grid-cols-2 gap-4 sm:grid-cols-4">
+          {quickActions.map(renderQuickAction)}
         </div>
 
-        {/* Appointments Section */}
         <div id="my-appointments" className="space-y-6">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold text-gray-900">My Appointments</h2>
-            <Link href="/lawyers" className="text-sm text-[#1E3A8A] font-medium hover:underline">+ Book New</Link>
+            <h2 className="text-xl font-bold text-foreground">{copy.myAppointments}</h2>
+            <LocaleLink href="/lawyers" className="text-sm font-medium text-primary transition-colors hover:text-primary/80">
+              {copy.bookNew}
+            </LocaleLink>
           </div>
 
           {apptLoading ? (
             <div className="flex items-center justify-center py-10">
-              <Loader2 className="w-6 h-6 text-[#1E3A8A] animate-spin" />
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
             </div>
           ) : appointments.length === 0 ? (
-            <div className="bg-white border border-gray-100 shadow-sm rounded-2xl p-12 text-center">
-              <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-6">
-                <Calendar className="w-10 h-10 text-[#1E3A8A]" />
+            <div className="rounded-2xl border border-border bg-background p-12 text-center shadow-sm">
+              <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <Calendar className="h-10 w-10" />
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">No Appointments Yet</h3>
-              <p className="text-gray-500 max-w-sm mx-auto mb-8">
-                Book your first consultation with a verified lawyer to get personalized legal advice.
-              </p>
-              <Link href="/lawyers" className="inline-block bg-[#1E3A8A] text-white px-8 py-3 rounded-xl font-semibold hover:bg-blue-800 transition-colors shadow-md hover:shadow-lg">
-                Find a Verified Lawyer
-              </Link>
+              <h3 className="mb-2 text-xl font-bold text-foreground">{copy.noAppointmentsTitle}</h3>
+              <p className="mx-auto mb-8 max-w-sm text-muted-foreground">{copy.noAppointmentsBody}</p>
+              <LocaleLink
+                href="/lawyers"
+                className="inline-block rounded-xl bg-primary px-8 py-3 font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+              >
+                {copy.findVerifiedLawyer}
+              </LocaleLink>
             </div>
           ) : (
             <>
-              {upcoming.length > 0 && (
+              {upcoming.length > 0 ? (
                 <div>
-                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Upcoming ({upcoming.length})</h3>
+                  <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                    {copy.upcomingHeading} ({upcoming.length})
+                  </h3>
                   <div className="space-y-3">
-                    {upcoming.map(a => <AppointmentCard key={a.id} appt={a} />)}
+                    {upcoming.map((appointment) => (
+                      <AppointmentCard
+                        key={appointment.id}
+                        appointment={appointment}
+                        copy={copy}
+                        lang={lang}
+                        onReviewClick={() =>
+                          setReviewAppt({
+                            id: appointment.id,
+                            name: appointment.lawyer.user.name ?? copy.legalExpert,
+                          })
+                        }
+                      />
+                    ))}
                   </div>
                 </div>
-              )}
-              {past.length > 0 && (
+              ) : null}
+
+              {past.length > 0 ? (
                 <div>
-                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Past & Cancelled</h3>
-                  <div className="space-y-3 opacity-75">
-                    {past.map(a => <AppointmentCard key={a.id} appt={a} />)}
+                  <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                    {copy.pastHeading}
+                  </h3>
+                  <div className="space-y-3 opacity-80">
+                    {past.map((appointment) => (
+                      <AppointmentCard
+                        key={appointment.id}
+                        appointment={appointment}
+                        copy={copy}
+                        lang={lang}
+                        onReviewClick={() =>
+                          setReviewAppt({
+                            id: appointment.id,
+                            name: appointment.lawyer.user.name ?? copy.legalExpert,
+                          })
+                        }
+                      />
+                    ))}
                   </div>
                 </div>
-              )}
+              ) : null}
             </>
           )}
         </div>
       </div>
 
-      <ReviewModal 
-        isOpen={!!reviewAppt}
+      <ReviewModal
+        isOpen={Boolean(reviewAppt)}
         onClose={() => setReviewAppt(null)}
         appointmentId={reviewAppt?.id || ''}
         lawyerName={reviewAppt?.name || ''}

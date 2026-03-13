@@ -1,150 +1,140 @@
 import type { Metadata } from 'next';
-import { Scale, Target, Heart, Users, Shield, Globe } from 'lucide-react';
+import { ArrowRight, FileText, MessageSquare, Scale, Shield, Target } from 'lucide-react';
 import Link from 'next/link';
 
-export const metadata: Metadata = {
-  title: 'About LexIndia | Our Mission to Make Legal Help Accessible',
-  description: 'LexIndia is an Indian legal-tech platform on a mission to make legal help accessible, transparent, and affordable for every Indian citizen.',
-  alternates: { canonical: '/about' },
-};
+import {
+  HighlightBanner,
+  PageContainer,
+  PageShell,
+  SubtlePanel,
+  SurfaceCard,
+} from '@/components/ui/theme-primitives';
+import { getAboutContent } from '@/lib/content/about';
+import { createLocalizedMetadata } from '@/lib/i18n/metadata';
+import { localizeHref } from '@/lib/i18n/navigation';
+import { getRequestLocale } from '@/lib/i18n/request';
 
-const values = [
-  {
-    icon: Scale,
-    title: 'Justice for All',
-    desc: 'Legal help should not be a privilege of the few. We believe every Indian deserves access to quality legal guidance regardless of income or background.',
-  },
-  {
-    icon: Shield,
-    title: 'Trust & Transparency',
-    desc: 'Every lawyer on our platform is individually verified. We never promote misleading claims, fake reviews, or unverified assurances.',
-  },
-  {
-    icon: Globe,
-    title: 'Multilingual First',
-    desc: 'India speaks many languages. LexIndia supports 14 Indian languages so that citizens can access legal help in their mother tongue.',
-  },
-  {
-    icon: Heart,
-    title: 'Public Utility',
-    desc: 'Our knowledge base, Know Your Rights content, and legal guides are free and publicly accessible — no account required.',
-  },
-];
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getRequestLocale();
+  const content = getAboutContent(locale);
 
-const pillars = [
-  { label: 'Find a Verified Lawyer', desc: 'Search and book consultations with lawyers across India, filtered by specialization, city, language, and fee.', href: '/lawyers' },
-  { label: 'Know Your Rights', desc: 'Free, plain-language content explaining your legal rights as a citizen, tenant, worker, or consumer under Indian law.', href: '/rights' },
-  { label: 'Legal Templates', desc: 'Download and use professionally structured legal document templates for common legal situations.', href: '/templates' },
-  { label: 'AI Legal Assistant', desc: 'Ask our AI assistant basic legal questions in English or Hindi — grounded in Indian law with instant responses.', href: '/' },
-];
+  return createLocalizedMetadata({
+    locale,
+    pathname: '/about',
+    title: `${content.badge} | LexIndia`,
+    description: content.intro,
+  });
+}
 
-export default function AboutPage() {
+const CAPABILITY_ICONS = [Scale, Shield, FileText, MessageSquare] as const;
+
+export default async function AboutPage() {
+  const locale = await getRequestLocale();
+  const content = getAboutContent(locale);
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Hero */}
-      <div className="bg-[#1E3A8A] text-white py-20">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-3 mb-4">
-            <Scale className="w-8 h-8 text-[#D4AF37]" />
-            <span className="text-[#D4AF37] font-semibold uppercase tracking-wider text-sm">Our Story</span>
+    <PageShell className="py-0">
+      <section className="border-b border-border bg-gradient-to-br from-primary via-primary to-accent/30 text-primary-foreground">
+        <PageContainer className="py-20">
+          <div className="max-w-4xl">
+            <span className="inline-flex rounded-full border border-primary-foreground/20 bg-primary-foreground/10 px-4 py-1 text-sm font-semibold uppercase tracking-[0.18em] text-primary-foreground/85">
+              {content.badge}
+            </span>
+            <h1 className="mt-6 max-w-3xl text-4xl font-bold tracking-tight sm:text-5xl">
+              {content.title}
+            </h1>
+            <p className="mt-6 max-w-3xl text-lg leading-8 text-primary-foreground/80">
+              {content.intro}
+            </p>
+            <div className="mt-8 flex flex-wrap gap-4">
+              <Link
+                href={localizeHref('/lawyers', locale)}
+                className="inline-flex items-center gap-2 rounded-xl bg-accent px-6 py-3 font-semibold text-accent-foreground transition-opacity hover:opacity-90"
+              >
+                {content.capabilities[0].title}
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+              <Link
+                href={localizeHref('/knowledge', locale)}
+                className="inline-flex items-center gap-2 rounded-xl border border-primary-foreground/20 bg-primary-foreground/10 px-6 py-3 font-semibold text-primary-foreground transition-colors hover:bg-primary-foreground/15"
+              >
+                {content.ctaTitle}
+              </Link>
+            </div>
           </div>
-          <h1 className="text-3xl sm:text-5xl font-bold mb-6 leading-tight">
-            Making Legal Help <br />
-            <span className="text-[#D4AF37]">Accessible to Every Indian</span>
-          </h1>
-          <p className="text-blue-200 text-lg max-w-2xl leading-relaxed">
-            LexIndia was built on a simple belief: that navigating India&apos;s legal system should not require wealth,
-            connections, or a law degree. We combine technology, multilingual content, and a verified lawyer network
-            to give every citizen a fair shot at justice.
-          </p>
-        </div>
-      </div>
+        </PageContainer>
+      </section>
 
-      {/* Mission */}
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="bg-white rounded-2xl p-10 shadow-sm border border-gray-100 mb-12">
-          <div className="flex items-center gap-3 mb-4">
-            <Target className="w-6 h-6 text-[#D4AF37]" />
-            <h2 className="text-2xl font-bold text-gray-900">Our Mission</h2>
+      <PageContainer className="py-16">
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
+          <HighlightBanner className="p-8">
+            <div className="flex items-center gap-3 text-primary">
+              <Target className="h-6 w-6" />
+              <h2 className="text-2xl font-bold text-foreground">{content.missionTitle}</h2>
+            </div>
+            <p className="mt-4 max-w-2xl text-lg leading-8 text-muted-foreground">
+              {content.missionBody}
+            </p>
+          </HighlightBanner>
+
+          <SubtlePanel className="p-8">
+            <div className="flex items-center gap-3 text-primary">
+              <Shield className="h-6 w-6" />
+              <h2 className="text-2xl font-bold text-foreground">{content.legalTitle}</h2>
+            </div>
+            <p className="mt-4 text-sm leading-7 text-muted-foreground">{content.legalBody}</p>
+          </SubtlePanel>
+        </div>
+
+        <section className="mt-16">
+          <h2 className="text-3xl font-bold text-foreground">{content.capabilitiesTitle}</h2>
+          <div className="mt-8 grid gap-6 md:grid-cols-2">
+            {content.capabilities.map((item, index) => {
+              const Icon = CAPABILITY_ICONS[index] ?? Scale;
+
+              return (
+                <Link key={item.href} href={localizeHref(item.href, locale)} className="group block">
+                  <SurfaceCard className="h-full p-6 transition-all group-hover:-translate-y-1 group-hover:border-primary/30 group-hover:shadow-md">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                      <Icon className="h-5 w-5" />
+                    </div>
+                    <h3 className="mt-5 text-xl font-semibold text-foreground transition-colors group-hover:text-primary">
+                      {item.title}
+                    </h3>
+                    <p className="mt-3 text-sm leading-7 text-muted-foreground">{item.description}</p>
+                    <div className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-primary">
+                      <span>{item.title}</span>
+                      <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+                    </div>
+                  </SurfaceCard>
+                </Link>
+              );
+            })}
           </div>
-          <p className="text-gray-600 text-lg leading-relaxed">
-            To bridge the gap between Indian citizens and quality legal help through technology — by connecting
-            people with verified lawyers, providing free legal knowledge in local languages, and making the
-            legal system less intimidating and more transparent for everyone.
-          </p>
-        </div>
+        </section>
 
-        {/* What We Offer */}
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">What LexIndia Offers</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-16">
-          {pillars.map((p) => (
+        <HighlightBanner className="mt-16 p-8 sm:p-10">
+          <div className="max-w-3xl">
+            <h2 className="text-3xl font-bold text-foreground">{content.ctaTitle}</h2>
+            <p className="mt-4 text-lg leading-8 text-muted-foreground">{content.ctaBody}</p>
+          </div>
+          <div className="mt-8 flex flex-wrap gap-4">
             <Link
-              key={p.label}
-              href={p.href}
-              className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:border-[#1E3A8A] hover:shadow-md transition-all group"
+              href={localizeHref('/lawyers', locale)}
+              className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
             >
-              <h3 className="font-bold text-gray-900 mb-2 group-hover:text-[#1E3A8A] transition-colors">{p.label}</h3>
-              <p className="text-gray-500 text-sm leading-relaxed">{p.desc}</p>
-            </Link>
-          ))}
-        </div>
-
-        {/* Values */}
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">Our Values</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-16">
-          {values.map((v) => {
-            const Icon = v.icon;
-            return (
-              <div key={v.title} className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex gap-4">
-                <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center shrink-0">
-                  <Icon className="w-5 h-5 text-[#1E3A8A]" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-gray-900 mb-1">{v.title}</h3>
-                  <p className="text-gray-500 text-sm leading-relaxed">{v.desc}</p>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Legal Structure */}
-        <div className="bg-gray-900 rounded-2xl p-8 text-white mb-12">
-          <div className="flex items-center gap-3 mb-4">
-            <Users className="w-5 h-5 text-[#D4AF37]" />
-            <h2 className="text-xl font-bold">About LexIndia</h2>
-          </div>
-          <p className="text-gray-400 text-sm leading-relaxed mb-4">
-            LexIndia is an Indian legal-technology platform. Our platform is operated in compliance with the
-            Bar Council of India Rules regarding online legal services and advertisements.
-          </p>
-          <p className="text-gray-400 text-sm leading-relaxed">
-            <strong className="text-gray-200">Disclaimer:</strong> LexIndia is a technology intermediary, not a law firm.
-            We do not provide legal advice. Lawyers on our platform are independent practitioners responsible for
-            their own legal advice and services.
-          </p>
-        </div>
-
-        {/* CTA */}
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">Ready to get legal help?</h2>
-          <p className="text-gray-500 mb-6">Find a verified lawyer in your city or explore free legal resources.</p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link
-              href="/lawyers"
-              className="bg-[#1E3A8A] text-white px-8 py-3 rounded-xl font-semibold hover:bg-blue-800 transition-colors"
-            >
-              Find a Lawyer
+              {content.capabilities[0].title}
+              <ArrowRight className="h-4 w-4" />
             </Link>
             <Link
-              href="/knowledge"
-              className="border border-[#1E3A8A] text-[#1E3A8A] px-8 py-3 rounded-xl font-semibold hover:bg-blue-50 transition-colors"
+              href={localizeHref('/knowledge', locale)}
+              className="inline-flex items-center gap-2 rounded-xl border border-primary/20 bg-background px-6 py-3 font-semibold text-primary transition-colors hover:bg-primary/5"
             >
-              Explore Knowledge Base
+              {content.capabilities[1].title}
             </Link>
           </div>
-        </div>
-      </div>
-    </div>
+        </HighlightBanner>
+      </PageContainer>
+    </PageShell>
   );
 }

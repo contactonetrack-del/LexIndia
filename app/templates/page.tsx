@@ -1,10 +1,19 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { FileText, Download, ShieldAlert, ArrowRight, Search } from 'lucide-react';
-import Link from 'next/link';
+import React, { useEffect, useState } from 'react';
+import { ArrowRight, Download, FileText, Search, ShieldAlert } from 'lucide-react';
+
+import LocaleLink from '@/components/LocaleLink';
+import {
+  HighlightBanner,
+  PageContainer,
+  PageShell,
+  SurfaceCard,
+} from '@/components/ui/theme-primitives';
+import { getMemoryLocalizedText, localizeTemplateText } from '@/lib/content/localized';
+import { getTemplatesContent } from '@/lib/content/templates';
+import { formatNumber } from '@/lib/i18n/format';
 import { useLanguage } from '@/lib/LanguageContext';
-import { getTranslation } from '@/lib/translations';
 
 interface Template {
   id: string;
@@ -12,13 +21,15 @@ interface Template {
   description: string;
   category: string;
   downloads: number;
+  content: string;
 }
 
-const CATEGORIES = ['All', 'Criminal', 'Civil Rights', 'Civil / Corporate', 'Property', 'General'];
-
 export default function TemplatesPage() {
-  const { lang, isIndic } = useLanguage();
-  const t = getTranslation(lang);
+  const { fontClass, lang, t } = useLanguage();
+  const content = getTemplatesContent(lang);
+  const searchTemplatesLabel = t.templates.searchPlaceholder;
+  const filterCategoryLabel = getMemoryLocalizedText('Filter by category', lang);
+
   const [templates, setTemplates] = useState<Template[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -26,134 +37,156 @@ export default function TemplatesPage() {
 
   useEffect(() => {
     const params = new URLSearchParams();
+    params.set('locale', lang);
+
     if (searchQuery) params.set('search', searchQuery);
     if (activeCategory !== 'All') params.set('category', activeCategory);
 
     fetch(`/api/templates?${params.toString()}`)
-      .then(r => r.json())
-      .then(data => { setTemplates(data.templates || []); setIsLoading(false); })
+      .then((response) => response.json())
+      .then((data) => {
+        setTemplates(data.templates || []);
+        setIsLoading(false);
+      })
       .catch(() => setIsLoading(false));
-  }, [searchQuery, activeCategory]);
+  }, [activeCategory, lang, searchQuery]);
 
-  const formatDownloads = (n: number) => {
-    if (n >= 1000) return `${(n / 1000).toFixed(0)}k+`;
-    return n.toString();
+  const formatDownloads = (downloads: number) => {
+    return formatNumber(downloads, lang, {
+      notation: downloads >= 1000 ? 'compact' : 'standard',
+      maximumFractionDigits: 0,
+    });
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-
-        <div className="text-center mb-12">
-          <h1 className={`text-3xl md:text-4xl font-bold text-gray-900 mb-4 ${isIndic ? 'font-hindi' : ''}`}>
+    <PageShell>
+      <PageContainer className="max-w-6xl">
+        <div className="mb-12 text-center">
+          <h1 className={`mb-4 text-3xl font-bold text-foreground md:text-4xl ${fontClass}`}>
             {t.templates.title}
           </h1>
-          <p className={`text-lg text-gray-600 max-w-2xl mx-auto ${isIndic ? 'font-hindi' : ''}`}>
+          <p className={`mx-auto max-w-2xl text-lg text-muted-foreground ${fontClass}`}>
             {t.templates.subtitle}
           </p>
         </div>
 
-        {/* Search */}
-        <div className="relative max-w-xl mx-auto mb-6">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" aria-hidden="true" />
-          <label htmlFor="template-search" className="sr-only">Search templates</label>
+        <div className="relative mx-auto mb-6 max-w-xl">
+          <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+          <label htmlFor="template-search" className="sr-only">
+            {searchTemplatesLabel}
+          </label>
           <input
             id="template-search"
             type="text"
             placeholder={t.templates.searchPlaceholder}
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#1E3A8A]/20 focus:border-[#1E3A8A] outline-none shadow-sm"
+            onChange={(event) => setSearchQuery(event.target.value)}
+            className={`w-full rounded-xl border border-border bg-background py-3 pl-12 pr-4 text-foreground outline-none shadow-sm transition-all focus:border-primary focus:ring-2 focus:ring-primary/20 ${fontClass}`}
           />
         </div>
 
-        {/* Category Filter Pills */}
-        <div className="flex flex-wrap gap-2 justify-center mb-8" role="group" aria-label="Filter by category">
-          {CATEGORIES.map((cat) => (
+        <div className="mb-8 flex flex-wrap justify-center gap-2" role="group" aria-label={filterCategoryLabel}>
+          {content.categories.map((category) => (
             <button
-              key={cat}
-              onClick={() => setActiveCategory(cat)}
-              aria-pressed={activeCategory === cat}
-              className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${activeCategory === cat
-                ? 'bg-[#1E3A8A] text-white'
-                : 'bg-white text-gray-600 border border-gray-200 hover:border-[#1E3A8A]'
-                }`}
+              key={category.id}
+              onClick={() => setActiveCategory(category.id)}
+              aria-pressed={activeCategory === category.id}
+              className={`rounded-full px-4 py-2 text-sm font-semibold transition-all ${activeCategory === category.id ? 'bg-primary text-primary-foreground' : 'border border-border bg-background text-muted-foreground hover:border-primary/30 hover:text-foreground'} ${fontClass}`}
             >
-              {cat}
+              {category.label}
             </button>
           ))}
         </div>
 
-        {/* Disclaimer */}
-        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-8 flex items-start gap-3">
-          <ShieldAlert className="w-5 h-5 text-yellow-600 shrink-0 mt-0.5" aria-hidden="true" />
-          <p className="text-sm text-yellow-800">
-            <strong>Disclaimer:</strong> These templates are provided as general guides. Laws vary by state. We recommend having a verified LexIndia lawyer review your filled document before submission.
-          </p>
+        <div className="mb-8 rounded-xl border border-warning/30 bg-warning/10 p-4 text-warning">
+          <div className="flex items-start gap-3">
+            <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0" />
+            <p className={`text-sm ${fontClass}`}>
+              <strong>{content.disclaimer.title}</strong> {content.disclaimer.body}
+            </p>
+          </div>
         </div>
 
-        {/* Templates Grid */}
         {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className="bg-white rounded-2xl p-6 border border-gray-200 animate-pulse">
-                <div className="flex justify-between mb-4">
-                  <div className="w-12 h-12 bg-gray-200 rounded-xl" />
-                  <div className="w-16 h-6 bg-gray-200 rounded" />
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+            {[...Array(4)].map((_, index) => (
+              <SurfaceCard key={index} className="animate-pulse rounded-2xl p-6">
+                <div className="mb-4 flex justify-between">
+                  <div className="h-12 w-12 rounded-xl bg-muted" />
+                  <div className="h-6 w-16 rounded bg-muted" />
                 </div>
-                <div className="h-5 bg-gray-200 rounded mb-2 w-3/4" />
-                <div className="h-4 bg-gray-200 rounded w-full" />
-                <div className="h-4 bg-gray-200 rounded w-5/6 mt-1" />
-              </div>
+                <div className="mb-2 h-5 w-3/4 rounded bg-muted" />
+                <div className="h-4 w-full rounded bg-muted" />
+                <div className="mt-1 h-4 w-5/6 rounded bg-muted" />
+              </SurfaceCard>
             ))}
           </div>
         ) : templates.length === 0 ? (
-          <div className="text-center py-12 bg-white rounded-2xl border border-gray-200">
-            <p className={`text-gray-500 ${isIndic ? 'font-hindi' : ''}`}>{t.common.noResults}{searchQuery ? ` "${searchQuery}"` : ''}</p>
-          </div>
+          <SurfaceCard className="rounded-2xl p-12 text-center">
+            <p className={`text-muted-foreground ${fontClass}`}>
+              {t.common.noResults}
+              {searchQuery ? ` "${searchQuery}"` : ''}
+            </p>
+          </SurfaceCard>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
-            {templates.map((doc) => (
-              <div key={doc.id} className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 hover:shadow-md transition-shadow flex flex-col h-full">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center text-[#1E3A8A]">
-                    <FileText className="w-6 h-6" aria-hidden="true" />
+          <div className="mb-12 grid grid-cols-1 gap-6 md:grid-cols-2">
+            {templates.map((template) => (
+              <SurfaceCard
+                key={template.id}
+                className="flex h-full flex-col rounded-2xl p-6 transition-shadow hover:shadow-md"
+              >
+                <div className="mb-4 flex items-start justify-between">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                    <FileText className="h-6 w-6" />
                   </div>
-                  <span className="bg-gray-100 text-gray-600 text-xs font-medium px-2.5 py-1 rounded-md">{doc.category}</span>
+                  <span className={`rounded-md bg-surface px-2.5 py-1 text-xs font-medium text-muted-foreground ${fontClass}`}>
+                    {template.category}
+                  </span>
                 </div>
 
-                <h3 className="text-xl font-bold text-gray-900 mb-2">{doc.title}</h3>
-                <p className="text-gray-600 text-sm mb-6 flex-1">{doc.description}</p>
+                <h3 className={`mb-2 text-xl font-bold text-foreground ${fontClass}`}>{template.title}</h3>
+                <p className={`mb-6 flex-1 text-sm text-muted-foreground ${fontClass}`}>
+                  {template.description}
+                </p>
 
-                <div className="flex items-center justify-between pt-4 border-t border-gray-100 mt-auto">
-                  <span className="text-xs text-gray-500 flex items-center gap-1">
-                    <Download className="w-3 h-3" aria-hidden="true" /> {formatDownloads(doc.downloads)} downloads
+                <div className="mt-auto flex items-center justify-between border-t border-border pt-4">
+                  <span className={`flex items-center gap-1 text-xs text-muted-foreground ${fontClass}`}>
+                    <Download className="h-3 w-3" />
+                    {formatDownloads(template.downloads)} {content.downloadsLabel}
                   </span>
                   <a
-                    href={`data:text/plain;charset=utf-8,${encodeURIComponent(`# ${doc.title}\n\nThis is a sample template. Please consult a lawyer before use.\n\n[Insert Content Here]`)}`}
-                    download={`${doc.id}-template.txt`}
-                    aria-label={`Download ${doc.title} as text file`}
-                    className="text-[#1E3A8A] hover:bg-blue-50 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1"
+                    href={`data:text/plain;charset=utf-8,${encodeURIComponent(template.content || `# ${template.title}\n\n${template.description}`)}`}
+                    download={`${template.id}-template.txt`}
+                    aria-label={localizeTemplateText('Download {title} as text file', lang, {
+                      title: template.title,
+                    })}
+                    className={`flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-medium text-primary transition-colors hover:bg-primary/10 ${fontClass}`}
                   >
-                    <Download className="w-4 h-4" /> TXT
+                    <Download className="h-4 w-4" />
+                    TXT
                   </a>
                 </div>
-              </div>
+              </SurfaceCard>
             ))}
           </div>
         )}
 
-        {/* Upsell Banner */}
-        <div className="bg-[#1E3A8A] rounded-2xl p-8 text-white text-center sm:text-left flex flex-col sm:flex-row items-center justify-between gap-6">
+        <HighlightBanner className="flex flex-col items-center justify-between gap-6 text-center sm:flex-row sm:text-left">
           <div>
-            <h2 className="text-2xl font-bold mb-2">Need help drafting a custom document?</h2>
-            <p className="text-blue-200">Get a verified lawyer to draft or review your legal notices, agreements, and complaints.</p>
+            <h2 className={`mb-2 text-2xl font-bold text-foreground ${fontClass}`}>
+              {content.upsell.title}
+            </h2>
+            <p className={`text-muted-foreground ${fontClass}`}>{content.upsell.description}</p>
           </div>
-          <Link href="/lawyers" className="shrink-0 bg-[#D4AF37] text-gray-900 font-bold px-8 py-4 rounded-xl hover:bg-yellow-500 transition-colors flex items-center gap-2">
-            Find a Lawyer <ArrowRight className="w-5 h-5" />
-          </Link>
-        </div>
-      </div>
-    </div>
+          <LocaleLink
+            href="/lawyers"
+            className={`inline-flex shrink-0 items-center gap-2 rounded-xl bg-accent px-8 py-4 font-bold text-accent-foreground transition-colors hover:opacity-90 ${fontClass}`}
+          >
+            {content.upsell.button}
+            <ArrowRight className="h-5 w-5" />
+          </LocaleLink>
+        </HighlightBanner>
+      </PageContainer>
+    </PageShell>
   );
 }

@@ -1,16 +1,48 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import {
-  ShieldCheck, FileCheck, Search, Star, AlertTriangle,
-  CheckCircle, XCircle, ArrowRight, Scale, Phone
+  AlertTriangle,
+  ArrowRight,
+  CheckCircle,
+  FileCheck,
+  Phone,
+  Scale,
+  Search,
+  ShieldCheck,
+  Star,
+  XCircle,
 } from 'lucide-react';
 
-export const metadata: Metadata = {
-  title: 'How We Verify Lawyers | LexIndia — Our Verification Process',
-  description: 'Learn how LexIndia verifies every lawyer on our platform — from Bar Council ID checks to identity verification and ongoing monitoring. Your safety is our priority.',
-  alternates: { canonical: '/verify-lawyers' },
-  keywords: ['verified lawyers India', 'LexIndia verification', 'lawyer verification process', 'how to find trusted lawyer India'],
-};
+import { createLocalizedMetadata } from '@/lib/i18n/metadata';
+import { getMemoryLocalizedText, localizeTreeFromMemory } from '@/lib/content/localized';
+import { withLocalePrefix } from '@/lib/i18n/navigation';
+import { getRequestLocale } from '@/lib/i18n/request';
+
+const VERIFY_LAWYERS_PAGE = {
+  heroTitle: 'How We Verify Lawyers',
+  heroDescription:
+    'Every lawyer on LexIndia goes through a rigorous 5-step verification process before receiving the Verified badge.',
+  heroBadgeLabel: 'Verified',
+  heroDescriptionSuffix: 'Here is exactly what we check and what we do not.',
+  heroSupport: 'We believe in transparency. If you have questions about a specific lawyer, use our',
+  heroSupportLink: 'Contact page',
+  heroSupportEnd: 'to reach our trust team.',
+  importantLabel: 'Important:',
+  importantText:
+    "Verification confirms a lawyer's identity and Bar Council enrolment. It does not guarantee outcomes, quality of advice, or specialization depth. Always review a lawyer's profile, ratings, and experience before booking.",
+  stepsTitle: 'Our 5-Step Verification Process',
+  stepsSubtitle: 'Applied to every lawyer before they can list on LexIndia.',
+  stepLabelPrefix: 'STEP',
+  verifiedTitle: 'Verified Means',
+  notVerifiedTitle: 'Not Verified Means',
+  rightsTitle: 'Your Rights as a LexIndia User',
+  faqTitle: 'Frequently Asked Questions',
+  reportTitle: 'Report a Concern',
+  reportBody:
+    "If you have a concern about a lawyer's credentials or conduct, our trust team is here to help.",
+  reportAction: 'Contact Trust Team',
+  findLawyersAction: 'Find Verified Lawyers',
+} as const;
 
 const VERIFICATION_STEPS = [
   {
@@ -18,70 +50,79 @@ const VERIFICATION_STEPS = [
     icon: FileCheck,
     title: 'Document Submission',
     desc: 'Every lawyer who applies to join LexIndia must submit their Bar Council Enrolment Certificate, Aadhaar card (for identity), and a professional photograph.',
-    color: 'bg-blue-50 border-blue-200',
-    iconColor: 'text-[#1E3A8A]',
-    iconBg: 'bg-blue-100',
+    color: 'bg-primary/10 border-primary/30',
+    iconColor: 'text-primary',
+    iconBg: 'bg-primary/20',
   },
   {
     number: '02',
     icon: Search,
     title: 'Bar Council Cross-Check',
     desc: 'Our team cross-references the submitted Bar Council Enrolment Number with the respective State Bar Council registry to verify active enrolment status.',
-    color: 'bg-indigo-50 border-indigo-200',
-    iconColor: 'text-indigo-700',
-    iconBg: 'bg-indigo-100',
+    color: 'bg-surface border-border',
+    iconColor: 'text-primary',
+    iconBg: 'bg-muted',
   },
   {
     number: '03',
     icon: ShieldCheck,
     title: 'Manual Document Review',
     desc: 'A LexIndia team member physically reviews submitted documents for authenticity. We check for tampered certificates, mismatched IDs, and false claims.',
-    color: 'bg-purple-50 border-purple-200',
-    iconColor: 'text-purple-700',
-    iconBg: 'bg-purple-100',
+    color: 'bg-accent/10 border-accent/30',
+    iconColor: 'text-accent',
+    iconBg: 'bg-accent/20',
   },
   {
     number: '04',
     icon: Star,
     title: 'Verification Badge Issued',
-    desc: 'Lawyers who pass all checks receive a ✓ Verified badge on their profile. Unverified applicants are notified and given a chance to resubmit correct documents.',
-    color: 'bg-amber-50 border-amber-200',
-    iconColor: 'text-amber-700',
-    iconBg: 'bg-amber-100',
+    desc: 'Lawyers who pass all checks receive a Verified badge on their profile. Unverified applicants are notified and given a chance to resubmit correct documents.',
+    color: 'bg-warning/10 border-warning/30',
+    iconColor: 'text-warning',
+    iconBg: 'bg-warning/20',
   },
   {
     number: '05',
     icon: AlertTriangle,
     title: 'Ongoing Monitoring',
     desc: 'Verification is not a one-time event. Client ratings, reviews, and complaints are monitored. Any credible complaint triggers an automatic re-review and potential suspension.',
-    color: 'bg-red-50 border-red-200',
-    iconColor: 'text-red-700',
-    iconBg: 'bg-red-100',
+    color: 'bg-danger/10 border-danger/30',
+    iconColor: 'text-danger',
+    iconBg: 'bg-danger/20',
   },
-];
+] as const;
 
 const VERIFIED_INDICATORS = [
-  'Blue ✓ Verified badge on profile',
+  'Verified badge on profile',
   'Bar Council ID visible on profile',
   'At least one consultation mode listed',
   'Profile reviewed by LexIndia team',
-];
+] as const;
 
 const NOT_VERIFIED_INDICATORS = [
   'No verification badge shown',
   'Newly onboarded (review pending)',
   'Profile flagged for document mismatch',
   'Active investigation for a complaint',
-];
+] as const;
+
+const USER_RIGHTS = [
+  'Report any lawyer for suspected fraud and we act within 24 hours.',
+  'Request a full refund if a lawyer misrepresents their credentials.',
+  'Raise a complaint about unprofessional conduct anytime.',
+  'Get a copy of your booking and consultation history.',
+  'Request account deletion and data erasure under DPDPA 2023.',
+  'Verify any lawyer directly with your State Bar Council.',
+] as const;
 
 const FAQS = [
   {
-    q: 'Does LexIndia guarantee a lawyer\'s quality of service?',
-    a: 'No. Verification confirms identity and Bar Council enrolment — it does not guarantee the quality or outcome of legal advice. You should use ratings, reviews, experience years, and your own judgment when choosing a lawyer.',
+    q: "Does LexIndia guarantee a lawyer's quality of service?",
+    a: 'No. Verification confirms identity and Bar Council enrolment. It does not guarantee quality or outcome of legal advice. You should use ratings, reviews, experience years, and your own judgment when choosing a lawyer.',
   },
   {
-    q: 'What if I suspect a lawyer\'s credentials are fake?',
-    a: 'Report it immediately via our Contact page or email trust@lexindia.in. We take fraud seriously and suspend profiles pending investigation. You can also verify any lawyer independently at your state Bar Council\'s website.',
+    q: "What if I suspect a lawyer's credentials are fake?",
+    a: "Report it immediately via our Contact page or email trust@lexindia.in. We take fraud seriously and suspend profiles pending investigation. You can also verify any lawyer independently at your state Bar Council's website.",
   },
   {
     q: 'Can a suspended or disqualified lawyer join LexIndia?',
@@ -89,73 +130,96 @@ const FAQS = [
   },
   {
     q: 'How long does verification take?',
-    a: 'Typically 2–5 business days after a lawyer submits all required documents. During high-demand periods this may extend to 7 days.',
+    a: 'Typically 2-5 business days after a lawyer submits all required documents. During high-demand periods this may extend to 7 days.',
   },
   {
     q: 'Is my data safe when booking through LexIndia?',
     a: 'Yes. All communication between you and the platform is encrypted. Your legal issue description is only shared with the specific lawyer you book. We do not sell personal data to third parties.',
   },
-];
+] as const;
 
-export default function VerifyLawyersPage() {
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getRequestLocale();
+
+  return createLocalizedMetadata({
+    locale,
+    pathname: '/verify-lawyers',
+    title: `${getMemoryLocalizedText('How We Verify Lawyers', locale)} | LexIndia`,
+    description: getMemoryLocalizedText(
+      'Learn how LexIndia verifies every lawyer on our platform from Bar Council ID checks to identity verification and ongoing monitoring.',
+      locale
+    ),
+    keywords: [
+      'verified lawyers India',
+      'LexIndia verification',
+      'lawyer verification process',
+      'how to find trusted lawyer India',
+    ],
+  });
+}
+
+export default async function VerifyLawyersPage() {
+  const locale = await getRequestLocale();
+  const copy = localizeTreeFromMemory(VERIFY_LAWYERS_PAGE, locale);
+  const steps = localizeTreeFromMemory(VERIFICATION_STEPS, locale, {
+    skipKeys: ['number', 'icon', 'color', 'iconColor', 'iconBg'],
+  });
+  const verifiedIndicators = localizeTreeFromMemory(VERIFIED_INDICATORS, locale);
+  const notVerifiedIndicators = localizeTreeFromMemory(NOT_VERIFIED_INDICATORS, locale);
+  const userRights = localizeTreeFromMemory(USER_RIGHTS, locale);
+  const faqs = localizeTreeFromMemory(FAQS, locale);
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Hero */}
-      <div className="bg-[#1E3A8A] text-white py-16">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="w-16 h-16 bg-[#D4AF37] rounded-2xl flex items-center justify-center mx-auto mb-5">
-            <ShieldCheck className="w-9 h-9 text-gray-900" />
+    <div className="min-h-screen bg-muted">
+      <div className="bg-primary py-16 text-primary-foreground">
+        <div className="mx-auto max-w-4xl px-4 text-center sm:px-6 lg:px-8">
+          <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-accent">
+            <ShieldCheck className="h-9 w-9 text-accent-foreground" />
           </div>
-          <h1 className="text-3xl sm:text-4xl font-bold mb-4">How We Verify Lawyers</h1>
-          <p className="text-blue-200 text-lg max-w-2xl mx-auto mb-4">
-            Every lawyer on LexIndia goes through a rigorous 5-step verification process before receiving 
-            the <strong className="text-white">✓ Verified</strong> badge. Here&apos;s exactly what we check — and what we don&apos;t.
+          <h1 className="mb-4 text-3xl font-bold sm:text-4xl">{copy.heroTitle}</h1>
+          <p className="mx-auto mb-4 max-w-2xl text-lg text-primary-foreground/80">
+            {copy.heroDescription} <strong className="text-primary-foreground">{copy.heroBadgeLabel}</strong>{' '}
+            {copy.heroDescriptionSuffix}
           </p>
-          <p className="text-blue-300 text-sm">
-            We believe in transparency. If you have questions about a specific lawyer, use our{' '}
-            <Link href="/contact" className="underline text-white">Contact page</Link> to reach our trust team.
+          <p className="text-sm text-primary-foreground/70">
+            {copy.heroSupport}{' '}
+            <Link href={withLocalePrefix('/contact', locale)} className="text-primary-foreground underline">
+              {copy.heroSupportLink}
+            </Link>{' '}
+            {copy.heroSupportEnd}
           </p>
         </div>
       </div>
 
-      {/* Important Disclaimer */}
-      <div className="bg-amber-50 border-b border-amber-200">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+      <div className="border-b border-warning/30 bg-warning/10">
+        <div className="mx-auto max-w-4xl px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex items-start gap-3">
-            <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-            <div>
-              <p className="text-amber-800 text-sm">
-                <strong>Important:</strong> Verification confirms a lawyer&apos;s identity and Bar Council enrolment. 
-                It does <strong>not</strong> guarantee outcomes, quality of advice, or specialisation depth. 
-                Always review a lawyer&apos;s profile, ratings, and experience before booking.
-              </p>
-            </div>
+            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-warning" />
+            <p className="text-sm text-warning">
+              <strong>{copy.importantLabel}</strong> {copy.importantText}
+            </p>
           </div>
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-
-        {/* 5-Step Process */}
+      <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6 lg:px-8">
         <section className="mb-14">
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Our 5-Step Verification Process</h2>
-          <p className="text-gray-500 mb-8">Applied to every lawyer before they can list on LexIndia.</p>
+          <h2 className="mb-2 text-2xl font-bold text-foreground">{copy.stepsTitle}</h2>
+          <p className="mb-8 text-muted-foreground">{copy.stepsSubtitle}</p>
           <div className="space-y-5">
-            {VERIFICATION_STEPS.map((step) => {
+            {steps.map((step) => {
               const Icon = step.icon;
               return (
-                <div key={step.number} className={`border-2 rounded-2xl p-6 ${step.color} flex items-start gap-5`}>
-                  <div className="shrink-0">
-                    <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${step.iconBg}`}>
-                      <Icon className={`w-6 h-6 ${step.iconColor}`} />
-                    </div>
+                <div key={step.number} className={`flex items-start gap-5 rounded-2xl border-2 p-6 ${step.color}`}>
+                  <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${step.iconBg}`}>
+                    <Icon className={`h-6 w-6 ${step.iconColor}`} />
                   </div>
                   <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-1">
-                      <span className="text-xs font-bold text-gray-400 tracking-widest">STEP {step.number}</span>
-                    </div>
-                    <h3 className="font-bold text-gray-900 mb-2">{step.title}</h3>
-                    <p className="text-gray-600 text-sm leading-relaxed">{step.desc}</p>
+                    <span className="mb-1 block text-xs font-bold tracking-widest text-muted-foreground">
+                      {copy.stepLabelPrefix} {step.number}
+                    </span>
+                    <h3 className="mb-2 font-bold text-foreground">{step.title}</h3>
+                    <p className="text-sm leading-relaxed text-muted-foreground">{step.desc}</p>
                   </div>
                 </div>
               );
@@ -163,90 +227,87 @@ export default function VerifyLawyersPage() {
           </div>
         </section>
 
-        {/* What Verified / Not Verified means */}
-        <section className="mb-14 grid grid-cols-1 sm:grid-cols-2 gap-6">
-          <div className="bg-green-50 border border-green-200 rounded-2xl p-6">
-            <h3 className="font-bold text-green-900 mb-4 flex items-center gap-2">
-              <CheckCircle className="w-5 h-5 text-green-600" /> ✓ Verified Means
+        <section className="mb-14 grid grid-cols-1 gap-6 sm:grid-cols-2">
+          <div className="rounded-2xl border border-success/30 bg-success/10 p-6">
+            <h3 className="mb-4 flex items-center gap-2 font-bold text-success">
+              <CheckCircle className="h-5 w-5 text-success" /> {copy.verifiedTitle}
             </h3>
             <ul className="space-y-2">
-              {VERIFIED_INDICATORS.map((item, i) => (
-                <li key={i} className="flex items-start gap-2 text-sm text-green-800">
-                  <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 shrink-0" /> {item}
+              {verifiedIndicators.map((item) => (
+                <li key={item} className="flex items-start gap-2 text-sm text-foreground">
+                  <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-success" />
+                  {item}
                 </li>
               ))}
             </ul>
           </div>
-          <div className="bg-red-50 border border-red-200 rounded-2xl p-6">
-            <h3 className="font-bold text-red-900 mb-4 flex items-center gap-2">
-              <XCircle className="w-5 h-5 text-red-500" /> Not Verified Means
+
+          <div className="rounded-2xl border border-danger/30 bg-danger/10 p-6">
+            <h3 className="mb-4 flex items-center gap-2 font-bold text-danger">
+              <XCircle className="h-5 w-5 text-danger" /> {copy.notVerifiedTitle}
             </h3>
             <ul className="space-y-2">
-              {NOT_VERIFIED_INDICATORS.map((item, i) => (
-                <li key={i} className="flex items-start gap-2 text-sm text-red-800">
-                  <XCircle className="w-4 h-4 text-red-400 mt-0.5 shrink-0" /> {item}
+              {notVerifiedIndicators.map((item) => (
+                <li key={item} className="flex items-start gap-2 text-sm text-foreground">
+                  <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-danger" />
+                  {item}
                 </li>
               ))}
             </ul>
           </div>
         </section>
 
-        {/* Your Rights as a User */}
-        <section className="mb-14 bg-[#1E3A8A] rounded-2xl p-8 text-white">
-          <div className="flex items-center gap-3 mb-5">
-            <Scale className="w-6 h-6 text-[#D4AF37]" />
-            <h2 className="text-xl font-bold">Your Rights as a LexIndia User</h2>
+        <section className="mb-14 rounded-2xl bg-primary p-8 text-primary-foreground">
+          <div className="mb-5 flex items-center gap-3">
+            <Scale className="h-6 w-6 text-accent" />
+            <h2 className="text-xl font-bold">{copy.rightsTitle}</h2>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {[
-              'Report any lawyer for suspected fraud — we act within 24 hours.',
-              'Request a full refund if a lawyer misrepresents their credentials.',
-              'Raise a complaint about unprofessional conduct anytime.',
-              'Get a copy of your booking and consultation history.',
-              'Request account deletion and data erasure under DPDPA 2023.',
-              'Verify any lawyer directly with your State Bar Council.',
-            ].map((right, i) => (
-              <div key={i} className="flex items-start gap-2">
-                <ArrowRight className="w-4 h-4 text-[#D4AF37] mt-0.5 shrink-0" />
-                <p className="text-blue-100 text-sm">{right}</p>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {userRights.map((right) => (
+              <div key={right} className="flex items-start gap-2">
+                <ArrowRight className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
+                <p className="text-sm text-primary-foreground/85">{right}</p>
               </div>
             ))}
           </div>
         </section>
 
-        {/* FAQs */}
         <section className="mb-14">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Frequently Asked Questions</h2>
+          <h2 className="mb-6 text-2xl font-bold text-foreground">{copy.faqTitle}</h2>
           <div className="space-y-5">
-            {FAQS.map((faq, i) => (
-              <div key={i} className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-                <h3 className="font-semibold text-gray-900 mb-2 text-sm">{faq.q}</h3>
-                <p className="text-gray-600 text-sm leading-relaxed">{faq.a}</p>
+            {faqs.map((faq) => (
+              <div key={faq.q} className="rounded-xl border border-border bg-background p-6 shadow-sm">
+                <h3 className="mb-2 text-sm font-semibold text-foreground">{faq.q}</h3>
+                <p className="text-sm leading-relaxed text-muted-foreground">{faq.a}</p>
               </div>
             ))}
           </div>
         </section>
 
-        {/* Report / Contact CTA */}
-        <section className="bg-gray-100 rounded-2xl p-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <section className="flex flex-col items-center justify-between gap-4 rounded-2xl border border-border bg-surface p-8 sm:flex-row">
           <div>
-            <h3 className="font-bold text-gray-900 mb-1 flex items-center gap-2">
-              <Phone className="w-4 h-4 text-[#1E3A8A]" /> Report a Concern
+            <h3 className="mb-1 flex items-center gap-2 font-bold text-foreground">
+              <Phone className="h-4 w-4 text-primary" />
+              {copy.reportTitle}
             </h3>
-            <p className="text-gray-500 text-sm">
-              If you have a concern about a lawyer&apos;s credentials or conduct, our trust team is here to help.
-            </p>
+            <p className="text-sm text-muted-foreground">{copy.reportBody}</p>
           </div>
-          <div className="flex gap-3 shrink-0">
-            <Link href="/contact" className="bg-[#1E3A8A] text-white px-6 py-3 rounded-xl font-semibold text-sm hover:bg-blue-800 transition-colors">
-              Contact Trust Team
+
+          <div className="flex shrink-0 gap-3">
+            <Link
+              href={withLocalePrefix('/contact', locale)}
+              className="rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+            >
+              {copy.reportAction}
             </Link>
-            <Link href="/lawyers" className="border border-[#1E3A8A] text-[#1E3A8A] px-6 py-3 rounded-xl font-semibold text-sm hover:bg-blue-50 transition-colors">
-              Find Verified Lawyers
+            <Link
+              href={withLocalePrefix('/lawyers', locale)}
+              className="rounded-xl border border-primary px-6 py-3 text-sm font-semibold text-primary transition-colors hover:bg-primary/10"
+            >
+              {copy.findLawyersAction}
             </Link>
           </div>
         </section>
-
       </div>
     </div>
   );

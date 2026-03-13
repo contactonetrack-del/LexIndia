@@ -1,122 +1,168 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { AlertTriangle, Scale, BookOpen, Phone } from 'lucide-react';
+import { AlertTriangle, BookOpen, Phone, Scale } from 'lucide-react';
 
-export const metadata: Metadata = {
-  title: 'Legal Disclaimer | LexIndia',
-  description: 'LexIndia legal disclaimer — the platform provides general legal information only, not legal advice. All users must read this disclaimer before using LexIndia services.',
-  alternates: { canonical: '/disclaimer' },
-};
+import { createLocalizedMetadata } from '@/lib/i18n/metadata';
+import { getMemoryLocalizedText, localizeTreeFromMemory } from '@/lib/content/localized';
+import { withLocalePrefix } from '@/lib/i18n/navigation';
+import { getRequestLocale } from '@/lib/i18n/request';
 
-export default function DisclaimerPage() {
+const DISCLAIMER_SECTIONS = [
+  {
+    icon: Scale,
+    title: '1. No lawyer-client relationship',
+    content:
+      'Using LexIndia, reading guides, or using AI chat does not create a lawyer-client relationship. Only a formal engagement with a licensed advocate creates one.',
+  },
+  {
+    icon: BookOpen,
+    title: '2. General information only',
+    content:
+      'All content, including guides, templates, AI responses, rights explainers, and listings, is for awareness. Laws and interpretations can change and vary by jurisdiction.',
+  },
+  {
+    icon: AlertTriangle,
+    title: '3. AI chat limitations',
+    content:
+      'AI responses may be incomplete or outdated. Do not rely solely on AI for legal decisions. Verify with qualified legal professionals and official sources.',
+  },
+  {
+    icon: Scale,
+    title: '4. Lawyer listings are not endorsements',
+    content:
+      'LexIndia verifies identity and enrolment but does not guarantee legal outcomes, quality, or suitability of any listed professional.',
+  },
+  {
+    icon: BookOpen,
+    title: '5. Template usage',
+    content:
+      'Templates are generic drafts and may not fit your specific situation. Have any legal document reviewed by a qualified lawyer before relying on it.',
+  },
+  {
+    icon: AlertTriangle,
+    title: '6. External resources',
+    content:
+      'Links to external websites are provided for convenience. LexIndia is not responsible for third-party content, accuracy, or availability.',
+  },
+  {
+    icon: Scale,
+    title: '7. Limitation of liability',
+    content:
+      'To the fullest extent permitted by law, LexIndia and its affiliates are not liable for losses arising from use of this platform or reliance on its content.',
+  },
+  {
+    icon: BookOpen,
+    title: '8. Jurisdiction',
+    content: 'LexIndia operates under Indian law. Disputes are subject to jurisdiction in New Delhi, India.',
+  },
+  {
+    icon: Scale,
+    title: '9. Applicable law',
+    content:
+      'This disclaimer is governed by Indian law, including the Information Technology Act, Advocates Act, BCI rules, and DPDPA 2023 where applicable.',
+  },
+] as const;
+
+const DISCLAIMER_PAGE = {
+  title: 'Legal disclaimer',
+  lastUpdated: 'Last updated: 10 March 2026',
+  warningTitle: 'Important: information, not legal advice',
+  warningBody:
+    'LexIndia provides general legal information only. Nothing on this website constitutes legal advice or creates a lawyer-client relationship.',
+  emergencyTitle: 'In case of emergency',
+  emergencyBody:
+    'If you are in immediate danger, call Police 100, Women Helpline 1091, or NALSA legal aid 15100. LexIndia is not an emergency service.',
+  contactLine: 'If you have questions about this disclaimer, please contact us.',
+  privacy: 'Privacy policy',
+  terms: 'Terms of service',
+  verification: 'Verification policy',
+} as const;
+
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getRequestLocale();
+
+  return createLocalizedMetadata({
+    locale,
+    pathname: '/disclaimer',
+    title: `${getMemoryLocalizedText('Legal Disclaimer', locale)} | LexIndia`,
+    description: getMemoryLocalizedText(
+      'LexIndia legal disclaimer. The platform provides general legal information only and not legal advice.',
+      locale
+    ),
+  });
+}
+
+export default async function DisclaimerPage() {
+  const locale = await getRequestLocale();
+  const sections = localizeTreeFromMemory(DISCLAIMER_SECTIONS, locale, { skipKeys: ['icon'] });
+  const copy = localizeTreeFromMemory(DISCLAIMER_PAGE, locale);
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-[#1E3A8A] text-white py-12">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="w-14 h-14 bg-amber-400 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <AlertTriangle className="w-8 h-8 text-gray-900" />
+    <div className="min-h-screen bg-muted">
+      <div className="bg-gradient-to-r from-primary to-accent/80 py-12 text-primary-foreground">
+        <div className="mx-auto max-w-3xl px-4 text-center sm:px-6 lg:px-8">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-accent/90">
+            <AlertTriangle className="h-8 w-8 text-accent-foreground" />
           </div>
-          <h1 className="text-3xl font-bold mb-3">Legal Disclaimer</h1>
-          <p className="text-blue-200 text-sm">Last updated: 10 March 2026</p>
+          <h1 className="mb-3 text-3xl font-bold">{copy.title}</h1>
+          <p className="text-sm text-primary-foreground/85">{copy.lastUpdated}</p>
         </div>
       </div>
 
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-8">
-
-        {/* Critical warning */}
-        <div className="bg-amber-50 border-2 border-amber-300 rounded-2xl p-6">
+      <div className="mx-auto max-w-3xl space-y-8 px-4 py-12 sm:px-6 lg:px-8">
+        <div className="rounded-2xl border border-warning/30 bg-warning/10 p-6">
           <div className="flex items-start gap-3">
-            <AlertTriangle className="w-6 h-6 text-amber-600 shrink-0 mt-0.5" />
+            <AlertTriangle className="mt-0.5 h-6 w-6 shrink-0 text-warning" />
             <div>
-              <h2 className="font-bold text-amber-900 mb-2">Important: Information, Not Legal Advice</h2>
-              <p className="text-amber-800 text-sm leading-relaxed">
-                LexIndia provides <strong>general legal information</strong> only. Nothing on this website — including guides, articles, AI chat responses, templates, or Know Your Rights content — constitutes <strong>legal advice</strong>. Using LexIndia does not create a lawyer-client relationship between you and LexIndia.
-              </p>
+              <h2 className="mb-2 font-bold text-warning">{copy.warningTitle}</h2>
+              <p className="text-sm leading-relaxed text-foreground">{copy.warningBody}</p>
             </div>
           </div>
         </div>
 
-        {/* Sections */}
-        {[
-          {
-            icon: Scale,
-            title: '1. No Lawyer-Client Relationship',
-            content: 'Using LexIndia, including consulting our AI assistant, reading our legal guides, or browsing our platform, does not create a lawyer-client relationship. Only a formal engagement with a licensed advocate creates such a relationship. If you need legal advice specific to your situation, you must engage a qualified lawyer directly.'
-          },
-          {
-            icon: BookOpen,
-            title: '2. General Information Only',
-            content: 'All content on LexIndia — including guides, templates, AI responses, Know Your Rights articles, and lawyer listings — is intended to provide general legal awareness. Laws, regulations, and their interpretations change frequently and vary by jurisdiction. LexIndia makes no guarantee that the information is current, accurate, complete, or applicable to your specific situation.'
-          },
-          {
-            icon: AlertTriangle,
-            title: '3. AI Chat Limitations',
-            content: 'LexIndia\'s AI legal assistant is powered by large language models. It can provide general information but can make errors, cite outdated laws, or misunderstand your specific situation. Never rely solely on AI responses for legal decisions. Always verify information with a qualified lawyer and official legal resources.'
-          },
-          {
-            icon: Scale,
-            title: '4. Lawyer Listings — Not Endorsements',
-            content: 'Lawyers listed on LexIndia are independent legal professionals. LexIndia verifies identity and Bar Council enrolment but does not guarantee the quality, accuracy, or outcome of any legal services provided by listed lawyers. LexIndia is not liable for any actions, advice, or services offered by lawyers listed on the platform.'
-          },
-          {
-            icon: BookOpen,
-            title: '5. Legal Templates',
-            content: 'Templates provided on LexIndia are general drafts for common situations. They may not be suitable for your specific circumstances, jurisdiction, or needs. Before using any template in a legal matter, consult a qualified lawyer who can review and customise it appropriately. Using a template incorrectly may have adverse legal consequences.'
-          },
-          {
-            icon: AlertTriangle,
-            title: '6. Links to External Websites',
-            content: 'LexIndia may link to external government websites, legal databases, or resources. We do not control these websites and are not responsible for their content, accuracy, or availability. Links are provided for convenience only and do not constitute endorsement.'
-          },
-          {
-            icon: Scale,
-            title: '7. Limitation of Liability',
-            content: 'To the fullest extent permitted by law, LexIndia, its directors, employees, partners, and affiliates shall not be liable for any direct, indirect, consequential, or incidental losses arising from the use of — or reliance on — any information or services provided through this platform.'
-          },
-          {
-            icon: BookOpen,
-            title: '8. Jurisdiction',
-            content: 'LexIndia operates under the laws of India. Any disputes arising from use of this platform are subject to the exclusive jurisdiction of the courts of New Delhi, India. The platform is designed for Indian users and Indian legal content. If you access it from another country, you do so at your own risk and must comply with local laws.'
-          },
-          {
-            icon: Scale,
-            title: '9. Applicable Law',
-            content: 'This disclaimer is governed by and construed in accordance with the laws of India, including the Information Technology Act 2000 (as amended), the Advocates Act 1961, the Bar Council of India Rules on Lawyers\' Advertising, and the Digital Personal Data Protection Act 2023.'
-          },
-        ].map(({ icon: Icon, title, content }) => (
-          <div key={title} className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-9 h-9 bg-blue-50 rounded-xl flex items-center justify-center shrink-0">
-                <Icon className="w-5 h-5 text-[#1E3A8A]" />
+        {sections.map(({ icon: Icon, title, content }) => (
+          <div key={title} className="rounded-2xl border border-border bg-background p-6 shadow-sm">
+            <div className="mb-3 flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10">
+                <Icon className="h-5 w-5 text-primary" />
               </div>
-              <h2 className="font-bold text-gray-900">{title}</h2>
+              <h2 className="font-bold text-foreground">{title}</h2>
             </div>
-            <p className="text-gray-600 text-sm leading-relaxed">{content}</p>
+            <p className="text-sm leading-relaxed text-muted-foreground">{content}</p>
           </div>
         ))}
 
-        {/* Emergency note */}
-        <div className="bg-red-50 border border-red-200 rounded-2xl p-6">
+        <div className="rounded-2xl border border-danger/30 bg-danger/10 p-6">
           <div className="flex items-start gap-3">
-            <Phone className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+            <Phone className="mt-0.5 h-5 w-5 shrink-0 text-danger" />
             <div>
-              <h2 className="font-bold text-red-900 mb-2">In Case of Emergency</h2>
-              <p className="text-red-800 text-sm">
-                If you are in immediate danger, call Police: <strong>100</strong>. Women&apos;s helpline: <strong>1091</strong>. 
-                NALSA free legal aid: <strong>15100</strong>. LexIndia is an information resource — it is not an emergency service.
-              </p>
+              <h2 className="mb-2 font-bold text-danger">{copy.emergencyTitle}</h2>
+              <p className="text-sm text-foreground">{copy.emergencyBody}</p>
             </div>
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="text-center text-sm text-gray-500 pb-4 space-y-2">
-          <p>If you have questions about this disclaimer, please <Link href="/contact" className="text-[#1E3A8A] underline">contact us</Link>.</p>
+        <div className="space-y-2 pb-4 text-center text-sm text-muted-foreground">
+          <p>{copy.contactLine}</p>
           <div className="flex justify-center gap-4">
-            <Link href="/privacy" className="text-[#1E3A8A] hover:underline">Privacy Policy</Link>
-            <Link href="/terms" className="text-[#1E3A8A] hover:underline">Terms of Service</Link>
-            <Link href="/verify-lawyers" className="text-[#1E3A8A] hover:underline">Verification Policy</Link>
+            <Link
+              href={withLocalePrefix('/privacy', locale)}
+              className="text-primary transition-colors hover:text-primary/80 hover:underline"
+            >
+              {copy.privacy}
+            </Link>
+            <Link
+              href={withLocalePrefix('/terms', locale)}
+              className="text-primary transition-colors hover:text-primary/80 hover:underline"
+            >
+              {copy.terms}
+            </Link>
+            <Link
+              href={withLocalePrefix('/verify-lawyers', locale)}
+              className="text-primary transition-colors hover:text-primary/80 hover:underline"
+            >
+              {copy.verification}
+            </Link>
           </div>
         </div>
       </div>

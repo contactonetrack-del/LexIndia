@@ -6,6 +6,7 @@
  */
 
 import { Resend } from 'resend';
+import { formatDate as formatLocalizedDate, formatTime } from '@/lib/i18n/format';
 
 // Lazy-initialise so the module is safe to import even without the key
 function getResend() {
@@ -20,8 +21,19 @@ const FROM = process.env.EMAIL_FROM ?? 'LexIndia <no-reply@lexindia.in>';
 
 function formatDate(isoDate: string) {
   const d = new Date(isoDate);
-  return d.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) +
-    ' at ' + d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+  return (
+    formatLocalizedDate(d, 'en-IN', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    }) +
+    ' at ' +
+    formatTime(d, 'en-IN', {
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+  );
 }
 
 const modeLabel: Record<string, string> = {

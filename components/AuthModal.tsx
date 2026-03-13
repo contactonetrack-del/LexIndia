@@ -1,11 +1,14 @@
 'use client';
 
-import React, { useState } from 'react';
-import { X, User, Scale, Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Eye, EyeOff, Loader2, Lock, Mail, Scale, User, X } from 'lucide-react';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { useLanguage } from '@/lib/LanguageContext';
+
+import { localizeTreeFromMemory } from '@/lib/content/localized';
 import { useAuth } from '@/lib/AuthContext';
+import { useLanguage } from '@/lib/LanguageContext';
+import { localizeHref } from '@/lib/i18n/navigation';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -14,7 +17,6 @@ interface AuthModalProps {
 
 type TabType = 'login' | 'register';
 
-// Google "G" SVG icon
 function GoogleIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
@@ -28,8 +30,16 @@ function GoogleIcon() {
 
 export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
   const router = useRouter();
-  const { t } = useLanguage();
+  const { lang, t } = useLanguage();
   const { authOptions } = useAuth();
+
+  const copy = localizeTreeFromMemory(
+    {
+      roleGroupAriaLabel: 'Account type',
+      consentSeparator: '/',
+    } as const,
+    lang
+  );
 
   const [tab, setTab] = useState<TabType>('login');
   const [role, setRole] = useState<'CITIZEN' | 'LAWYER'>('CITIZEN');
@@ -43,79 +53,123 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
   const [consentChecked, setConsentChecked] = useState(false);
   const [consentTimestamp, setConsentTimestamp] = useState<string | null>(null);
 
-
   const resetForm = () => {
-    setName(''); setEmail(''); setPassword(''); setError('');
-    setConsentChecked(false); setConsentTimestamp(null);
+    setName('');
+    setEmail('');
+    setPassword('');
+    setError('');
+    setConsentChecked(false);
+    setConsentTimestamp(null);
   };
 
-  // Update internal state when modal opens
-  React.useEffect(() => {
+  useEffect(() => {
     if (isOpen) {
-      setTab(authOptions.initialTab || 'login');
-      setRole(authOptions.initialRole || 'CITIZEN');
-      resetForm();
+      const timeout = window.setTimeout(() => {
+        setTab(authOptions.initialTab || 'login');
+        setRole(authOptions.initialRole || 'CITIZEN');
+        resetForm();
+      }, 0);
+
+      return () => {
+        window.clearTimeout(timeout);
+      };
     }
+    return undefined;
   }, [isOpen, authOptions]);
 
   if (!isOpen) return null;
 
   const handleGoogleSignIn = async () => {
     if (tab === 'register' && !consentChecked) {
-      setError('You must agree to the Terms of Service and Privacy Policy to register.');
+      setError(t.common.error);
       return;
     }
+
     setIsGoogleLoading(true);
     setError('');
+
     try {
-      await signIn('google', { callbackUrl: role === 'LAWYER' ? '/dashboard/lawyer' : '/dashboard/citizen' });
+      await signIn('google', {
+        callbackUrl: localizeHref(role === 'LAWYER' ? '/dashboard/lawyer' : '/dashboard/citizen', lang),
+      });
       onClose();
     } catch {
-      setError('Google sign-in failed. Please try again.');
+      setError(t.common.error);
       setIsGoogleLoading(false);
     }
   };
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true); setError('');
+  const handleLogin = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setIsLoading(true);
+    setError('');
+
     const result = await signIn('credentials', { email, password, redirect: false });
+
     setIsLoading(false);
     if (result?.error) {
-      setError('Invalid email or password');
-    } else {
-      onClose();
-      router.refresh();
-      router.push(role === 'LAWYER' ? '/dashboard/lawyer' : '/dashboard/citizen');
+      setError(t.common.error);
+      return;
     }
+
+    onClose();
+    router.refresh();
+    router.push(localizeHref(role === 'LAWYER' ? '/dashboard/lawyer' : '/dashboard/citizen', lang));
   };
 
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (password.length < 8) { setError('Password must be at least 8 characters'); return; }
-    if (!consentChecked) { setError('You must agree to the Terms of Service and Privacy Policy to register.'); return; }
-    setIsLoading(true); setError('');
-    const ts = new Date().toISOString();
-    setConsentTimestamp(ts);
+  const handleRegister = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    if (password.length < 8) {
+      setError(t.auth.passRequirements);
+      return;
+    }
+
+    if (!consentChecked) {
+      setError(t.common.error);
+      return;
+    }
+
+    setIsLoading(true);
+    setError('');
+    const timestamp = new Date().toISOString();
+    setConsentTimestamp(timestamp);
+
     try {
-      const res = await fetch('/api/register', {
+      const response = await fetch('/api/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password, role, consentTimestamp: ts, consentVersion: '1.0' }),
+        body: JSON.stringify({
+          name,
+          email,
+          password,
+          role,
+          consentTimestamp: timestamp,
+          consentVersion: '1.0',
+        }),
       });
-      const data = await res.json();
-      if (res.status === 429) {
-        setError(`Too many attempts. Retry in ${data.retryAfter} seconds.`);
-        setIsLoading(false); return;
+
+      const data = await response.json();
+
+      if (response.status === 429) {
+        setError(t.common.error);
+        setIsLoading(false);
+        return;
       }
-      if (!res.ok) { setError(data.error || 'Registration failed'); setIsLoading(false); return; }
+
+      if (!response.ok) {
+        setError(data.error || t.common.error);
+        setIsLoading(false);
+        return;
+      }
+
       await signIn('credentials', { email, password, redirect: false });
       setIsLoading(false);
       onClose();
       router.refresh();
-      router.push(role === 'LAWYER' ? '/dashboard/lawyer' : '/dashboard/citizen');
+      router.push(localizeHref(role === 'LAWYER' ? '/dashboard/lawyer' : '/dashboard/citizen', lang));
     } catch {
-      setError('Something went wrong. Please try again.');
+      setError(t.common.error);
       setIsLoading(false);
     }
   };
@@ -124,152 +178,184 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-foreground/45 p-4 backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
       aria-labelledby="auth-modal-title"
     >
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-        {/* Header */}
-        <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gradient-to-r from-[#1E3A8A] to-blue-700">
-          <h2 id="auth-modal-title" className="text-xl font-bold text-white">
+      <div className="w-full max-w-md overflow-hidden rounded-2xl border border-border bg-background shadow-2xl">
+        <div className="flex items-center justify-between border-b border-border bg-primary p-6 text-primary-foreground">
+          <h2 id="auth-modal-title" className="text-xl font-bold">
             {tab === 'login' ? t.auth.loginTitle : t.auth.signupTitle}
           </h2>
           <button
-            onClick={() => { onClose(); resetForm(); }}
-            className="p-2 text-white/70 hover:text-white hover:bg-white/20 rounded-full transition-colors"
-            aria-label="Close authentication modal"
+            onClick={() => {
+              onClose();
+              resetForm();
+            }}
+            className="rounded-full p-2 text-primary-foreground/70 transition-colors hover:bg-primary-foreground/15 hover:text-primary-foreground"
+            aria-label={t.common.cancel}
           >
-            <X className="w-5 h-5" />
+            <X className="h-5 w-5" />
           </button>
         </div>
 
-        {/* Tabs */}
-        <div className="flex border-b border-gray-100" role="tablist">
+        <div className="flex border-b border-border" role="tablist">
           {(['login', 'register'] as TabType[]).map((tabName) => (
             <button
               key={tabName}
               role="tab"
               aria-selected={tab === tabName}
-              onClick={() => { setTab(tabName); resetForm(); }}
-              className={`flex-1 py-3 text-sm font-semibold capitalize transition-colors ${tab === tabName ? 'text-[#1E3A8A] border-b-2 border-[#1E3A8A]' : 'text-gray-500 hover:text-gray-700'}`}
+              onClick={() => {
+                setTab(tabName);
+                resetForm();
+              }}
+              className={`flex-1 border-b-2 py-3 text-sm font-semibold capitalize transition-colors ${
+                tab === tabName
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
             >
               {tabName === 'login' ? t.auth.loginBtn : t.auth.signupBtn}
             </button>
           ))}
         </div>
 
-        <div className="p-6 space-y-4">
-          {/* Role Selector */}
-          <div className="flex gap-3" role="group" aria-label="Account type">
-            {(['CITIZEN', 'LAWYER'] as const).map((r) => (
+        <div className="space-y-4 p-6">
+          <div className="flex gap-3" role="group" aria-label={copy.roleGroupAriaLabel}>
+            {(['CITIZEN', 'LAWYER'] as const).map((currentRole) => (
               <button
-                key={r}
+                key={currentRole}
                 type="button"
-                onClick={() => setRole(r)}
-                aria-pressed={role === r}
-                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 text-sm font-semibold transition-all ${role === r ? 'border-[#1E3A8A] bg-blue-50 text-[#1E3A8A]' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}
+                onClick={() => setRole(currentRole)}
+                aria-pressed={role === currentRole}
+                className={`flex flex-1 items-center justify-center gap-2 rounded-xl border-2 py-2.5 text-sm font-semibold transition-all ${
+                  role === currentRole
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-border text-muted-foreground hover:border-primary/40 hover:text-foreground'
+                }`}
               >
-                {r === 'CITIZEN' ? <User className="w-4 h-4" /> : <Scale className="w-4 h-4" />}
-                {r === 'CITIZEN' ? t.auth.roleCitizen : t.auth.roleLawyer}
+                {currentRole === 'CITIZEN' ? <User className="h-4 w-4" /> : <Scale className="h-4 w-4" />}
+                {currentRole === 'CITIZEN' ? t.auth.roleCitizen : t.auth.roleLawyer}
               </button>
             ))}
           </div>
 
-          {/* Consent Checkbox — register only (Applies to both Google and Email) */}
           {tab === 'register' && (
             <div className="flex items-start gap-3 py-1">
               <input
                 id="auth-consent-global"
                 type="checkbox"
                 checked={consentChecked}
-                onChange={(e) => setConsentChecked(e.target.checked)}
-                className="mt-0.5 w-4 h-4 rounded border-gray-300 text-[#1E3A8A] focus:ring-[#1E3A8A] cursor-pointer"
+                onChange={(event) => setConsentChecked(event.target.checked)}
+                className="mt-0.5 h-4 w-4 cursor-pointer rounded border-border text-primary focus:ring-primary"
                 required
               />
-              <label htmlFor="auth-consent-global" className="text-xs text-gray-600 leading-relaxed cursor-pointer">
-                I agree to LexIndia&apos;s{' '}
-                <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-[#1E3A8A] underline font-medium">
-                  Terms of Service
+              <label
+                htmlFor="auth-consent-global"
+                className="cursor-pointer text-xs leading-relaxed text-muted-foreground"
+              >
+                <a
+                  href={localizeHref('/terms', lang)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-primary underline"
+                >
+                  {t.footer.terms}
                 </a>{' '}
-                and{' '}
-                <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-[#1E3A8A] underline font-medium">
-                  Privacy Policy
-                </a>.
+                <span aria-hidden="true">{copy.consentSeparator}</span>{' '}
+                <a
+                  href={localizeHref('/privacy', lang)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-primary underline"
+                >
+                  {t.footer.privacy}
+                </a>
+                .
               </label>
             </div>
           )}
 
-          {/* Google Sign-In */}
           {isGoogleAvailable && (
             <button
               type="button"
               onClick={handleGoogleSignIn}
               disabled={isGoogleLoading}
-              className="w-full flex items-center justify-center gap-3 bg-white border border-gray-300 text-gray-700 font-semibold py-2.5 px-4 rounded-xl hover:bg-gray-50 hover:border-gray-400 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
-              aria-label="Continue with Google"
+              className="flex w-full items-center justify-center gap-3 rounded-xl border border-border bg-background px-4 py-2.5 font-semibold text-foreground shadow-sm transition-all hover:border-primary/40 hover:bg-surface disabled:cursor-not-allowed disabled:opacity-50"
+              aria-label={t.auth.continueGoogle}
             >
-              {isGoogleLoading
-                ? <Loader2 className="w-4 h-4 animate-spin" />
-                : <GoogleIcon />}
+              {isGoogleLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <GoogleIcon />}
               {t.auth.continueGoogle}
             </button>
           )}
 
-          {/* Divider */}
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200" /></div>
-            <div className="relative flex justify-center text-xs text-gray-500 bg-white px-2">
-              <span className="bg-white px-2">or continue with email</span>
+          <div className="relative" aria-hidden="true">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-border" />
             </div>
           </div>
 
-          {/* Email/Password Form */}
           <form onSubmit={tab === 'login' ? handleLogin : handleRegister} className="space-y-3">
             {tab === 'register' && (
               <div>
-                <label htmlFor="auth-name" className="block text-sm font-medium text-gray-700 mb-1">{t.auth.nameLabel}</label>
+                <label htmlFor="auth-name" className="mb-1 block text-sm font-medium text-foreground">
+                  {t.auth.nameLabel}
+                </label>
                 <input
                   id="auth-name"
                   type="text"
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#1E3A8A] focus:border-transparent"
-                  placeholder="Adv. Ravi Shankar"
+                  onChange={(event) => setName(event.target.value)}
+                  className="w-full rounded-xl border border-border bg-background px-4 py-2.5 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  placeholder={t.auth.namePh}
                   required
                   autoComplete="name"
                 />
               </div>
             )}
+
             <div>
-              <label htmlFor="auth-email" className="block text-sm font-medium text-gray-700 mb-1">{t.auth.emailLabel}</label>
+              <label htmlFor="auth-email" className="mb-1 block text-sm font-medium text-foreground">
+                {t.auth.emailLabel}
+              </label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" aria-hidden="true" />
+                <Mail
+                  className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                  aria-hidden="true"
+                />
                 <input
                   id="auth-email"
                   type="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#1E3A8A] focus:border-transparent"
-                  placeholder="you@example.com"
+                  onChange={(event) => setEmail(event.target.value)}
+                  className="w-full rounded-xl border border-border bg-background py-2.5 pl-10 pr-4 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  placeholder={t.auth.emailPh}
                   required
                   autoComplete="email"
                 />
               </div>
             </div>
+
             <div>
-              <label htmlFor="auth-password" className="block text-sm font-medium text-gray-700 mb-1">
-                {t.auth.passLabel} {tab === 'register' && <span className="text-gray-400 text-xs">({t.auth.passRequirements})</span>}
+              <label htmlFor="auth-password" className="mb-1 block text-sm font-medium text-foreground">
+                {t.auth.passLabel}{' '}
+                {tab === 'register' && (
+                  <span className="text-xs text-muted-foreground">({t.auth.passRequirements})</span>
+                )}
               </label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" aria-hidden="true" />
+                <Lock
+                  className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                  aria-hidden="true"
+                />
                 <input
                   id="auth-password"
                   type={showPassword ? 'text' : 'password'}
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#1E3A8A] focus:border-transparent"
-                  placeholder="••••••••"
+                  onChange={(event) => setPassword(event.target.value)}
+                  className="w-full rounded-xl border border-border bg-background py-2.5 pl-10 pr-10 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  placeholder={t.auth.passPh}
                   required
                   minLength={8}
                   autoComplete={tab === 'login' ? 'current-password' : 'new-password'}
@@ -277,43 +363,46 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  aria-label={t.auth.passLabel}
                   aria-pressed={showPassword}
                 >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
+
               {tab === 'login' && (
-                <div className="flex justify-end mt-1.5">
+                <div className="mt-1.5 flex justify-end">
                   <button
                     type="button"
                     onClick={() => {
                       onClose();
-                      router.push('/forgot-password');
+                      router.push(localizeHref('/forgot-password', lang));
                     }}
-                    className="text-sm font-medium text-[#1E3A8A] hover:underline"
+                    className="text-sm font-medium text-primary hover:underline"
                   >
-                    Forgot your password?
+                    {t.auth.forgotPass}
                   </button>
                 </div>
               )}
             </div>
 
             {error && (
-              <p role="alert" aria-live="polite" className="text-red-600 text-sm bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+              <p
+                role="alert"
+                aria-live="polite"
+                className="rounded-lg border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger"
+              >
                 {error}
               </p>
             )}
 
-
-
             <button
               type="submit"
               disabled={isLoading || (tab === 'register' && !consentChecked)}
-              className="w-full bg-[#1E3A8A] text-white font-bold py-3 rounded-xl hover:bg-blue-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-2"
+              className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3 font-bold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {isLoading && <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />}
+              {isLoading && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
               {tab === 'login' ? t.auth.loginBtn : t.auth.signupBtn}
             </button>
           </form>

@@ -1,13 +1,11 @@
 import type { Metadata } from 'next';
-import { Shield, Lock, Eye, Database, UserCheck, Mail } from 'lucide-react';
+import { Database, Eye, Lock, Mail, Shield, UserCheck } from 'lucide-react';
 
-export const metadata: Metadata = {
-  title: 'Privacy Policy | LexIndia',
-  description: 'Learn how LexIndia collects, uses, and protects your personal data in compliance with Indian IT Act 2000 and the Digital Personal Data Protection Act 2023.',
-  alternates: { canonical: '/privacy' },
-};
+import { createLocalizedMetadata } from '@/lib/i18n/metadata';
+import { getMemoryLocalizedText, localizeTreeFromMemory } from '@/lib/content/localized';
+import { getRequestLocale } from '@/lib/i18n/request';
 
-const sections = [
+const PRIVACY_SECTIONS = [
   {
     icon: Database,
     title: 'Information We Collect',
@@ -77,61 +75,104 @@ const sections = [
       'We may disclose data if required by law, court order, or governmental authority.',
     ],
   },
-];
+] as const;
 
-export default function PrivacyPage() {
+const PRIVACY_PAGE = {
+  legalBadge: 'Legal',
+  title: 'Privacy Policy',
+  intro:
+    'LexIndia is committed to protecting your personal data. This policy explains what we collect, how we use it, and your rights under Indian law.',
+  effective: 'Effective: 10 March 2026',
+  lastUpdated: 'Last Updated: 10 March 2026',
+  version: 'Version 1.0',
+  applicableLawLabel: 'Applicable Law',
+  applicableLawBody:
+    'This Privacy Policy is governed by the Information Technology Act 2000, the Information Technology (Reasonable Security Practices) Rules 2011, and the Digital Personal Data Protection Act 2023 (DPDPA).',
+  retentionTitle: 'Data Retention',
+  retentionBodyOne:
+    'We retain your account data for as long as your account remains active. Appointment and booking records are retained for 7 years as required by Indian financial and legal record-keeping obligations.',
+  retentionBodyTwo:
+    'You may delete your account at any time from your dashboard settings. Upon deletion, your personal data will be anonymised or erased within 30 days, except where retention is legally required.',
+  childrenTitle: "Children's Privacy",
+  childrenBody:
+    'LexIndia is not intended for use by persons under 18 years of age. We do not knowingly collect personal data from minors. If you believe we have inadvertently collected such data, please contact us immediately at',
+  changesTitle: 'Changes to This Policy',
+  changesBody:
+    'We may update this Privacy Policy from time to time. When we make material changes, we will notify registered users by email and update the "Last Updated" date above. Continued use of LexIndia after changes constitutes acceptance of the revised policy.',
+  contactTitle: 'Contact Our Privacy Team',
+  contactBody:
+    'For any privacy-related questions, requests, or complaints, please contact our designated Privacy Officer:',
+  emailAddress: 'privacy@lexindia.in',
+  emailLabel: 'Email',
+  grievanceLabel: 'Grievance Officer',
+  grievanceValue: 'LexIndia Privacy Team',
+  responseLabel: 'Response Time',
+  responseValue: 'We aim to respond to all privacy requests within 30 days.',
+} as const;
+
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getRequestLocale();
+
+  return createLocalizedMetadata({
+    locale,
+    pathname: '/privacy',
+    title: `${getMemoryLocalizedText('Privacy Policy', locale)} | LexIndia`,
+    description: getMemoryLocalizedText(
+      'Learn how LexIndia collects, uses, and protects your personal data in compliance with Indian IT Act 2000 and the Digital Personal Data Protection Act 2023.',
+      locale
+    ),
+  });
+}
+
+export default async function PrivacyPage() {
+  const locale = await getRequestLocale();
+  const sections = localizeTreeFromMemory(PRIVACY_SECTIONS, locale, { skipKeys: ['icon'] });
+  const copy = localizeTreeFromMemory(PRIVACY_PAGE, locale);
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Hero */}
-      <div className="bg-[#1E3A8A] text-white py-16">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-3 mb-4">
-            <Shield className="w-8 h-8 text-[#D4AF37]" />
-            <span className="text-[#D4AF37] font-semibold uppercase tracking-wider text-sm">Legal</span>
+    <div className="min-h-screen bg-muted">
+      <div className="bg-primary py-16 text-primary-foreground">
+        <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
+          <div className="mb-4 flex items-center gap-3">
+            <Shield className="h-8 w-8 text-accent" />
+            <span className="text-sm font-semibold uppercase tracking-wider text-accent">{copy.legalBadge}</span>
           </div>
-          <h1 className="text-3xl sm:text-4xl font-bold mb-4">Privacy Policy</h1>
-          <p className="text-blue-200 text-lg max-w-2xl">
-            LexIndia is committed to protecting your personal data. This policy explains what we collect,
-            how we use it, and your rights under Indian law.
-          </p>
-          <div className="mt-6 flex flex-wrap gap-4 text-sm text-blue-300">
-            <span>Effective: 10 March 2026</span>
-            <span>·</span>
-            <span>Last Updated: 10 March 2026</span>
-            <span>·</span>
-            <span>Version 1.0</span>
+          <h1 className="mb-4 text-3xl font-bold sm:text-4xl">{copy.title}</h1>
+          <p className="max-w-2xl text-lg text-primary-foreground/80">{copy.intro}</p>
+          <div className="mt-6 flex flex-wrap gap-4 text-sm text-primary-foreground/75">
+            <span>{copy.effective}</span>
+            <span>/</span>
+            <span>{copy.lastUpdated}</span>
+            <span>/</span>
+            <span>{copy.version}</span>
           </div>
         </div>
       </div>
 
-      {/* Disclaimer Banner */}
-      <div className="bg-amber-50 border-b border-amber-200">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <p className="text-amber-800 text-sm">
-            <strong>Applicable Law:</strong> This Privacy Policy is governed by the Information Technology Act 2000,
-            the Information Technology (Reasonable Security Practices) Rules 2011, and the Digital Personal Data
-            Protection Act 2023 (DPDPA).
+      <div className="border-b border-warning/30 bg-warning/10">
+        <div className="mx-auto max-w-4xl px-4 py-4 sm:px-6 lg:px-8">
+          <p className="text-sm text-foreground">
+            <strong>{copy.applicableLawLabel}:</strong> {copy.applicableLawBody}
           </p>
         </div>
       </div>
 
-      {/* Content */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6 lg:px-8">
         <div className="space-y-10">
           {sections.map((section) => {
             const Icon = section.icon;
             return (
-              <div key={section.title} className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center">
-                    <Icon className="w-5 h-5 text-[#1E3A8A]" />
+              <div key={section.title} className="rounded-2xl border border-border bg-background p-8 shadow-sm">
+                <div className="mb-6 flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
+                    <Icon className="h-5 w-5 text-primary" />
                   </div>
-                  <h2 className="text-xl font-bold text-gray-900">{section.title}</h2>
+                  <h2 className="text-xl font-bold text-foreground">{section.title}</h2>
                 </div>
                 <ul className="space-y-3">
-                  {section.content.map((item, i) => (
-                    <li key={i} className="flex items-start gap-3 text-gray-600 text-sm leading-relaxed">
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#D4AF37] mt-2 shrink-0" />
+                  {section.content.map((item) => (
+                    <li key={item} className="flex items-start gap-3 text-sm leading-relaxed text-muted-foreground">
+                      <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />
                       {item}
                     </li>
                   ))}
@@ -140,49 +181,41 @@ export default function PrivacyPage() {
             );
           })}
 
-          {/* Retention & Deletion */}
-          <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Data Retention</h2>
-            <p className="text-gray-600 text-sm leading-relaxed mb-3">
-              We retain your account data for as long as your account remains active. Appointment and booking records
-              are retained for 7 years as required by Indian financial and legal record-keeping obligations.
-            </p>
-            <p className="text-gray-600 text-sm leading-relaxed">
-              You may delete your account at any time from your dashboard settings. Upon deletion, your personal data
-              will be anonymised or erased within 30 days, except where retention is legally required.
+          <div className="rounded-2xl border border-border bg-background p-8 shadow-sm">
+            <h2 className="mb-4 text-xl font-bold text-foreground">{copy.retentionTitle}</h2>
+            <p className="mb-3 text-sm leading-relaxed text-muted-foreground">{copy.retentionBodyOne}</p>
+            <p className="text-sm leading-relaxed text-muted-foreground">{copy.retentionBodyTwo}</p>
+          </div>
+
+          <div className="rounded-2xl border border-border bg-background p-8 shadow-sm">
+            <h2 className="mb-4 text-xl font-bold text-foreground">{copy.childrenTitle}</h2>
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              {copy.childrenBody}{' '}
+              <a href="mailto:privacy@lexindia.in" className="text-primary underline">
+                {copy.emailAddress}
+              </a>
+              .
             </p>
           </div>
 
-          {/* Children */}
-          <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Children&apos;s Privacy</h2>
-            <p className="text-gray-600 text-sm leading-relaxed">
-              LexIndia is not intended for use by persons under 18 years of age. We do not knowingly collect personal
-              data from minors. If you believe we have inadvertently collected such data, please contact us immediately
-              at <a href="mailto:privacy@lexindia.in" className="text-[#1E3A8A] underline">privacy@lexindia.in</a>.
-            </p>
+          <div className="rounded-2xl border border-border bg-background p-8 shadow-sm">
+            <h2 className="mb-4 text-xl font-bold text-foreground">{copy.changesTitle}</h2>
+            <p className="text-sm leading-relaxed text-muted-foreground">{copy.changesBody}</p>
           </div>
 
-          {/* Changes */}
-          <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Changes to This Policy</h2>
-            <p className="text-gray-600 text-sm leading-relaxed">
-              We may update this Privacy Policy from time to time. When we make material changes, we will notify
-              registered users by email and update the &quot;Last Updated&quot; date above. Continued use of LexIndia
-              after changes constitutes acceptance of the revised policy.
-            </p>
-          </div>
-
-          {/* Contact */}
-          <div className="bg-[#1E3A8A] rounded-2xl p-8 text-white">
-            <h2 className="text-xl font-bold mb-4">Contact Our Privacy Team</h2>
-            <p className="text-blue-200 text-sm mb-6">
-              For any privacy-related questions, requests, or complaints, please contact our designated Privacy Officer:
-            </p>
-            <div className="space-y-2 text-sm text-blue-100">
-              <p><strong className="text-white">Email:</strong> privacy@lexindia.in</p>
-              <p><strong className="text-white">Grievance Officer:</strong> LexIndia Privacy Team</p>
-              <p><strong className="text-white">Response Time:</strong> We aim to respond to all privacy requests within 30 days.</p>
+          <div className="rounded-2xl bg-primary p-8 text-primary-foreground">
+            <h2 className="mb-4 text-xl font-bold">{copy.contactTitle}</h2>
+            <p className="mb-6 text-sm text-primary-foreground/80">{copy.contactBody}</p>
+            <div className="space-y-2 text-sm text-primary-foreground/85">
+              <p>
+                <strong className="text-primary-foreground">{copy.emailLabel}:</strong> {copy.emailAddress}
+              </p>
+              <p>
+                <strong className="text-primary-foreground">{copy.grievanceLabel}:</strong> {copy.grievanceValue}
+              </p>
+              <p>
+                <strong className="text-primary-foreground">{copy.responseLabel}:</strong> {copy.responseValue}
+              </p>
             </div>
           </div>
         </div>

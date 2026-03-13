@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
+
+import { getApiLocalizedText } from '@/lib/i18n/api';
 import prisma from '@/lib/prisma';
 import Razorpay from "razorpay";
 
@@ -12,13 +14,16 @@ export async function POST(req: NextRequest) {
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = await req.json();
 
     if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
-      return NextResponse.json({ error: 'Missing payment signature details' }, { status: 400 });
+      return NextResponse.json(
+        { error: getApiLocalizedText(req, 'Missing payment signature details') },
+        { status: 400 }
+      );
     }
 
     const secret = process.env.RAZORPAY_KEY_SECRET;
     if (!secret) {
       console.error('RAZORPAY_KEY_SECRET is missing from environment variables');
-      return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+      return NextResponse.json({ error: getApiLocalizedText(req, 'Internal server error') }, { status: 500 });
     }
 
     // Verify signature
@@ -28,7 +33,7 @@ export async function POST(req: NextRequest) {
       .digest('hex');
 
     if (generated_signature !== razorpay_signature) {
-      return NextResponse.json({ error: 'Invalid payment signature' }, { status: 400 });
+      return NextResponse.json({ error: getApiLocalizedText(req, 'Invalid payment signature') }, { status: 400 });
     }
 
     // 1. Differentiate by fetching the actual Order from Razorpay to read notes securely
@@ -39,7 +44,10 @@ export async function POST(req: NextRequest) {
       const { userId, tier } = rzpOrder.notes as Record<string, string>;
       
       if (!userId || !tier) {
-         return NextResponse.json({ error: 'Invalid subscription order metadata' }, { status: 400 });
+         return NextResponse.json(
+           { error: getApiLocalizedText(req, 'Invalid subscription order metadata') },
+           { status: 400 }
+         );
       }
       
       const expiry = new Date();
@@ -62,7 +70,10 @@ export async function POST(req: NextRequest) {
     });
 
     if (!appointment) {
-      return NextResponse.json({ error: 'Order ID not found in records' }, { status: 404 });
+      return NextResponse.json(
+        { error: getApiLocalizedText(req, 'Order ID not found in records') },
+        { status: 404 }
+      );
     }
 
     // Update appointment status to PAID and CONFIRMED
@@ -78,6 +89,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, type: 'APPOINTMENT' }, { status: 200 });
   } catch (error) {
     console.error('[Payment Verify API] Error:', error);
-    return NextResponse.json({ error: 'Failed to verify payment' }, { status: 500 });
+    return NextResponse.json({ error: getApiLocalizedText(req, 'Failed to verify payment') }, { status: 500 });
   }
 }
