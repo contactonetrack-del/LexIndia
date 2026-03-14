@@ -120,12 +120,13 @@ export default function AdminDashboardClient({
   user: { name?: string | null; email?: string | null };
 }) {
   const { lang, fontClass } = useLanguage();
-  const copy = localizeTreeFromMemory(
-    {
-      title: 'Trust and editorial review',
-      subtitle:
-        'Review lawyer verification submissions plus templates, FAQs, guides, rights pages, and law knowledge status from one dashboard.',
-      refresh: 'Refresh queue',
+	  const copy = localizeTreeFromMemory(
+	    {
+	      badgeLine: 'LexIndia Admin',
+	      title: 'Trust and editorial review',
+	      subtitle:
+	        'Review lawyer verification submissions plus templates, FAQs, guides, rights pages, and law knowledge status from one dashboard.',
+	      refresh: 'Refresh queue',
       verificationQueue: 'Lawyer verification queue',
       templateQueue: 'Template editorial queue',
       faqQueue: 'FAQ editorial queue',
@@ -155,16 +156,19 @@ export default function AdminDashboardClient({
       sectionKey: 'Section',
       liveContent: 'Live content',
       topicOnly: 'Topic only',
-      openDocument: 'Open document',
-      certificate: 'Certificate',
-      identity: 'Identity',
-      practice: 'Practice',
-      saved: 'Review saved.',
-      loadFailed: 'Failed to load review queue.',
-      updateFailed: 'Failed to update review.',
-    } as const,
-    lang
-  );
+	      openDocument: 'Open document',
+	      certificate: 'Certificate',
+	      identity: 'Identity',
+	      practice: 'Practice',
+	      viewPublicProfile: 'View public profile',
+	      viewGuide: 'View guide',
+	      viewRightsPage: 'View rights page',
+	      saved: 'Review saved.',
+	      loadFailed: 'Failed to load review queue.',
+	      updateFailed: 'Failed to update review.',
+	    } as const,
+	    lang
+	  );
 
   const [cases, setCases] = useState<VerificationCase[]>([]);
   const [templates, setTemplates] = useState<TemplateRecord[]>([]);
@@ -620,13 +624,13 @@ export default function AdminDashboardClient({
   };
 
   return (
-    <div className="min-h-screen bg-muted">
-      <div className="bg-gradient-to-r from-primary to-accent/80 text-primary-foreground">
-        <div className="mx-auto max-w-6xl px-4 py-8">
-          <p className="text-sm text-primary-foreground/85">LexIndia Admin</p>
-          <h1 className={`text-3xl font-bold ${fontClass}`}>{copy.title}</h1>
-          <p className="mt-2 max-w-3xl text-sm text-primary-foreground/85">{copy.subtitle}</p>
-          <p className="mt-1 text-xs text-primary-foreground/75">
+	    <div className="min-h-screen bg-muted">
+	      <div className="bg-gradient-to-r from-primary to-accent/80 text-primary-foreground">
+	        <div className="mx-auto max-w-6xl px-4 py-8">
+	          <p className="text-sm text-primary-foreground/85">{copy.badgeLine}</p>
+	          <h1 className={`text-3xl font-bold ${fontClass}`}>{copy.title}</h1>
+	          <p className="mt-2 max-w-3xl text-sm text-primary-foreground/85">{copy.subtitle}</p>
+	          <p className="mt-1 text-xs text-primary-foreground/75">
             {user.name} {user.email ? `• ${user.email}` : ''}
           </p>
         </div>
@@ -723,14 +727,14 @@ export default function AdminDashboardClient({
                               </p>
                             ) : null}
                           </div>
-                          <Link
-                            href={`/${lang}/lawyers/${entry.lawyerProfile.id}`}
-                            target="_blank"
-                            className="text-sm font-medium text-primary hover:underline"
-                          >
-                            View public profile
-                          </Link>
-                        </div>
+	                          <Link
+	                            href={`/${lang}/lawyers/${entry.lawyerProfile.id}`}
+	                            target="_blank"
+	                            className="text-sm font-medium text-primary hover:underline"
+	                          >
+	                            {copy.viewPublicProfile}
+	                          </Link>
+	                        </div>
 
                         <div className="mt-4 flex flex-wrap gap-3 text-sm">
                           {entry.identityDocumentUrl ? (
@@ -994,14 +998,14 @@ export default function AdminDashboardClient({
                               </p>
                             ) : null}
                           </div>
-                          <Link
-                            href={`/${lang}/guides/${entry.slug}`}
-                            target="_blank"
-                            className="text-sm font-medium text-primary hover:underline"
-                          >
-                            View guide
-                          </Link>
-                        </div>
+	                          <Link
+	                            href={`/${lang}/guides/${entry.slug}`}
+	                            target="_blank"
+	                            className="text-sm font-medium text-primary hover:underline"
+	                          >
+	                            {copy.viewGuide}
+	                          </Link>
+	                        </div>
 
                         <div className="mt-4 space-y-3">
                           <select
@@ -1082,14 +1086,14 @@ export default function AdminDashboardClient({
                               </p>
                             ) : null}
                           </div>
-                          <Link
-                            href={`/${lang}/rights/${entry.slug}`}
-                            target="_blank"
-                            className="text-sm font-medium text-primary hover:underline"
-                          >
-                            View rights page
-                          </Link>
-                        </div>
+	                          <Link
+	                            href={`/${lang}/rights/${entry.slug}`}
+	                            target="_blank"
+	                            className="text-sm font-medium text-primary hover:underline"
+	                          >
+	                            {copy.viewRightsPage}
+	                          </Link>
+	                        </div>
 
                         <div className="mt-4 space-y-3">
                           <select

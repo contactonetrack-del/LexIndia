@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ArrowRight, Phone } from 'lucide-react';
 
-import { getLocalizedText } from '@/lib/content/localized';
+import { getLocalizedText, getMemoryLocalizedText } from '@/lib/content/localized';
 import { getRightsCategories, rightsCopy } from '@/lib/content/rights';
 import { getEditorialStatusLabel, normalizeEditorialStatus } from '@/lib/editorial-review';
 import { createLocalizedMetadata } from '@/lib/i18n/metadata';
@@ -142,9 +142,14 @@ export default async function RightsPage() {
             </Link>
           </div>
           <div className="rounded-2xl border border-border bg-background p-6 shadow-sm">
-            <h3 className="mb-2 text-lg font-bold text-foreground">Indian laws</h3>
+            <h3 className="mb-2 text-lg font-bold text-foreground">
+              {getMemoryLocalizedText('Indian laws', locale)}
+            </h3>
             <p className="mb-4 text-sm text-muted-foreground">
-              Browse reviewed act summaries and section explainers before you escalate your matter.
+              {getMemoryLocalizedText(
+                'Browse reviewed act summaries and section explainers before you escalate your matter.',
+                locale
+              )}
             </p>
             <Link href={withLocalePrefix('/laws', locale)} className="text-sm font-semibold text-primary hover:underline">
               {messages.common.viewDetails}

@@ -242,18 +242,20 @@ function mergeNamedOptions(primary: NamedOption[], selected: NamedOption[] = [])
     optionMap.set(key, option);
   });
 
-  return Array.from(optionMap.values()).sort((left, right) =>
-    left.name.localeCompare(right.name)
-  );
-}
+	return Array.from(optionMap.values()).sort((left, right) =>
+	    left.name.localeCompare(right.name)
+	  );
+	}
 
-function mergeModeOptions(
-  primary: ReadonlyArray<LawyerConsultationModeValue>,
-  selected: Array<{ mode: string }> = []
-) {
-  return Array.from(
-    new Set([
-      ...primary,
+	type ModeSelection = { mode: string };
+
+	function mergeModeOptions(
+	  primary: readonly LawyerConsultationModeValue[],
+	  selected: ModeSelection[] = []
+	) {
+	  return Array.from(
+	    new Set([
+	      ...primary,
       ...selected
         .map((entry) => entry.mode)
         .filter(

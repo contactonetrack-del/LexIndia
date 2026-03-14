@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client';
 
 import {
   GUIDE_REGISTRY_SEED_RECORDS,
-} from '@/lib/content/guides-registry';
+} from '../lib/content/guides-registry';
 import {
   LEGAL_ACT_TIMELINE_SEED_RECORDS,
   LEGAL_ACT_RELATION_SEED_RECORDS,
@@ -12,18 +12,18 @@ import {
   LAW_SECTION_ALIAS_SEED_RECORDS,
   LAW_VERSION_SEED_RECORDS,
   LEGAL_ISSUE_TOPICS_SEED_RECORDS,
-} from '@/lib/content/law-metadata';
-import { LAW_REGISTRY_SEED_RECORDS } from '@/lib/content/law-registry';
+} from '../lib/content/law-metadata';
+import { LAW_REGISTRY_SEED_RECORDS } from '../lib/content/law-registry';
 import {
   SEEDED_FAQ_CATEGORIES,
   SEEDED_LANGUAGES,
   SEEDED_SPECIALIZATIONS,
   SEEDED_TEMPLATES,
-} from '@/lib/content/seed-data';
-import { RIGHT_REGISTRY_SEED_RECORDS } from '@/lib/content/rights';
-import { AVAILABILITY_TIME_OPTIONS } from '@/lib/availability';
-import { SUPPORTED_LOCALES } from '@/lib/i18n/config';
-import { getDisplayLocale } from '@/lib/i18n/display-locale';
+} from '../lib/content/seed-data';
+import { RIGHT_REGISTRY_SEED_RECORDS } from '../lib/content/rights';
+import { AVAILABILITY_TIME_OPTIONS } from '../lib/availability';
+import { SUPPORTED_LOCALES } from '../lib/i18n/config';
+import { getDisplayLocale } from '../lib/i18n/display-locale';
 
 const prisma = new PrismaClient();
 

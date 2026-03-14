@@ -21,11 +21,11 @@ import { getActRelationLabel, getLawTimelineEventLabel } from '@/lib/law-history
 import { getLawVersionStatusLabel } from '@/lib/law-status';
 import prisma from '@/lib/prisma';
 
-const ACT_PAGE_COPY = {
-  backToLaws: 'Back to laws',
-  badge: 'Reviewed act summary',
-  reviewLabel: 'Reviewed on',
-  disclaimerTitle: 'General information only',
+	const ACT_PAGE_COPY = {
+	  backToLaws: 'Back to laws',
+	  badge: 'Reviewed act summary',
+	  reviewLabel: 'Reviewed on',
+	  disclaimerTitle: 'General information only',
   disclaimerBody:
     'This act summary is for legal awareness. If your issue is urgent or fact-sensitive, use the related guides below or consult a verified lawyer.',
   sectionsHeading: 'Key sections available on LexIndia',
@@ -42,13 +42,14 @@ const ACT_PAGE_COPY = {
   sourceAuthorityLabel: 'Source authority',
   openOfficialSource: 'Open official act page',
   openOfficialPdf: 'Open official PDF',
-  versionTitle: 'Current version status',
-  versionLabel: 'Version label',
-  versionStatus: 'Status',
-  commencementDate: 'Commencement date',
-  effectiveFrom: 'Effective from',
-  effectiveTo: 'Effective to',
-  updateSummary: 'Update note',
+	  versionTitle: 'Current version status',
+	  versionLabel: 'Version label',
+	  versionStatus: 'Status',
+	  currentLabel: 'Current',
+	  commencementDate: 'Commencement date',
+	  effectiveFrom: 'Effective from',
+	  effectiveTo: 'Effective to',
+	  updateSummary: 'Update note',
   versionTimelineTitle: 'Version timeline',
   historyTimelineTitle: 'Act history and update timeline',
   historyTimelineBody:
@@ -450,12 +451,12 @@ export default async function ActDetailPage({ params }: Props) {
                         <span className="rounded-full border border-primary/20 bg-primary/10 px-2.5 py-0.5 text-[11px] font-semibold text-primary">
                           {getLawVersionStatusLabel(version.status)}
                         </span>
-                        {version.isCurrent ? (
-                          <span className="rounded-full border border-success/20 bg-success/10 px-2.5 py-0.5 text-[11px] font-semibold text-success">
-                            Current
-                          </span>
-                        ) : null}
-                      </div>
+	                        {version.isCurrent ? (
+	                          <span className="rounded-full border border-success/20 bg-success/10 px-2.5 py-0.5 text-[11px] font-semibold text-success">
+	                            {copy.currentLabel}
+	                          </span>
+	                        ) : null}
+	                      </div>
                       <div className="mt-3 grid grid-cols-1 gap-3 text-xs text-muted-foreground sm:grid-cols-2">
                         {version.commencementDate ? (
                           <div>

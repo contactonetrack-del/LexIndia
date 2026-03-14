@@ -415,6 +415,51 @@ export default function BookingPageClient({ lawyerId }: { lawyerId: string }) {
 
   const availableModes = lawyer.modes.map((mode) => mode.mode);
 
+  let availabilityNode: React.ReactNode = null;
+
+  if (availabilityLoading) {
+    availabilityNode = (
+      <div className="col-span-full flex items-center gap-2 rounded-xl border border-border bg-surface/60 px-4 py-3 text-sm text-muted-foreground">
+        <Loader2 className="h-4 w-4 animate-spin" />
+        {bookingUiCopy.loadingSlots}
+      </div>
+    );
+  } else if (availabilityError) {
+    availabilityNode = (
+      <div
+        data-testid="booking-availability-message"
+        className="col-span-full rounded-xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger"
+      >
+        {availabilityError}
+      </div>
+    );
+  } else if (availableSlots.length === 0) {
+    availabilityNode = (
+      <div
+        data-testid="booking-availability-message"
+        className="col-span-full rounded-xl border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning"
+      >
+        {bookingUiCopy.noSlots}
+      </div>
+    );
+  } else {
+    availabilityNode = availableSlots.map((time) => (
+      <button
+        key={time}
+        data-testid={`booking-time-${time.replace(':', '-')}`}
+        onClick={() => setSelectedTime(time)}
+        className={`flex items-center justify-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-all ${
+          selectedTime === time
+            ? 'border-primary bg-primary text-primary-foreground shadow-md'
+            : 'border-border bg-background text-foreground hover:border-primary/30 hover:bg-surface'
+        }`}
+      >
+        <Clock className="h-4 w-4" />
+        {formatTimeSlot(time, displayLocale)}
+      </button>
+    ));
+  }
+
   return (
     <div className="min-h-screen bg-muted py-8">
       <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
@@ -534,36 +579,7 @@ export default function BookingPageClient({ lawyerId }: { lawyerId: string }) {
                   <div>
                     <h3 className="mb-4 text-lg font-semibold text-foreground">{copy.selectTime}</h3>
                     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                      {availabilityLoading ? (
-                        <div className="col-span-full flex items-center gap-2 rounded-xl border border-border bg-surface/60 px-4 py-3 text-sm text-muted-foreground">
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          {bookingUiCopy.loadingSlots}
-                        </div>
-                      ) : availabilityError ? (
-                        <div data-testid="booking-availability-message" className="col-span-full rounded-xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
-                          {availabilityError}
-                        </div>
-                      ) : availableSlots.length === 0 ? (
-                        <div data-testid="booking-availability-message" className="col-span-full rounded-xl border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
-                          {bookingUiCopy.noSlots}
-                        </div>
-                      ) : (
-                        availableSlots.map((time) => (
-                          <button
-                            key={time}
-                            data-testid={`booking-time-${time.replace(':', '-')}`}
-                            onClick={() => setSelectedTime(time)}
-                            className={`flex items-center justify-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-all ${
-                              selectedTime === time
-                                ? 'border-primary bg-primary text-primary-foreground shadow-md'
-                                : 'border-border bg-background text-foreground hover:border-primary/30 hover:bg-surface'
-                            }`}
-                          >
-                            <Clock className="h-4 w-4" />
-                            {formatTimeSlot(time, displayLocale)}
-                          </button>
-                        ))
-                      )}
+                      {availabilityNode}
                     </div>
                   </div>
                 )}

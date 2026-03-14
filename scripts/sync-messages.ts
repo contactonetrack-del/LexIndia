@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
-import { allTranslations, languageNames } from '@/lib/translations';
+import { allTranslations, languageNames } from '../lib/translations';
 
 async function ensureDir(dir: string) {
   await fs.mkdir(dir, { recursive: true });

@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import {
   getVerificationStorageMode,
   uploadVerificationDocument,
-} from '@/lib/verification-storage';
+} from '../lib/verification-storage';
 import { loadLocalEnv } from './load-local-env';
 
 const prisma = new PrismaClient();

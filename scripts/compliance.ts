@@ -1,18 +1,18 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import allowlist from '@/config/compliance-allowlist.json';
-import baseline from '@/config/compliance-baseline.json';
-import { getKnowledgeContent } from '@/lib/content/knowledge';
+import allowlist from '../config/compliance-allowlist.json';
+import baseline from '../config/compliance-baseline.json';
+import { getKnowledgeContent } from '../lib/content/knowledge';
 import {
   SEEDED_FAQ_CATEGORIES,
   SEEDED_LANGUAGES,
   SEEDED_SPECIALIZATIONS,
   SEEDED_TEMPLATES,
-} from '@/lib/content/seed-data';
-import { getTemplatesContent } from '@/lib/content/templates';
-import { SUPPORTED_LOCALES, type Locale } from '@/lib/i18n/config';
-import { allTranslations } from '@/lib/i18n/messages';
+} from '../lib/content/seed-data';
+import { getTemplatesContent } from '../lib/content/templates';
+import { SUPPORTED_LOCALES, type Locale } from '../lib/i18n/config';
+import { allTranslations } from '../lib/i18n/messages';
 
 type Violation = {
   file: string;

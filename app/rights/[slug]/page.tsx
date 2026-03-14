@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { ArrowLeft, ArrowRight, BookOpen, Phone } from 'lucide-react';
 import { notFound } from 'next/navigation';
 
-import { getLocalizedText } from '@/lib/content/localized';
+import { getLocalizedText, localizeTreeFromMemory } from '@/lib/content/localized';
 import { getRightDiscoveryBundle } from '@/lib/legal-discovery';
 import { rightsCategories, rightsCopy } from '@/lib/content/rights';
 import { normalizeEditorialStatus } from '@/lib/editorial-review';
@@ -61,16 +61,33 @@ export default async function RightsDetailPage({ params }: { params: Promise<{ s
   const editorialStatus = normalizeEditorialStatus(rightEntry?.editorialStatus, 'APPROVED');
   const isReviewed = editorialStatus === 'APPROVED';
   const discovery = await getRightDiscoveryBundle(resolvedParams.slug, locale);
+  const uiCopy = localizeTreeFromMemory(
+    {
+      reviewedRightsSummary: 'Reviewed rights summary',
+      rightsSummaryUnderReview: 'Rights summary under review',
+      rightsSummaryInProgress: 'Rights summary in progress',
+      reviewedOn: 'Reviewed on',
+      editorialNote: 'Editorial note',
+      relatedLawSections: 'Related law sections',
+      relatedGuides: 'Related guides',
+      relatedFaqs: 'Search related FAQs',
+      reviewedNoteApproved:
+        "This rights summary has been approved in LexIndia's editorial workflow for public awareness use.",
+      reviewedNoteReview:
+        'This rights summary is still in editorial review. Use it as an orientation aid and speak with a lawyer for case-specific advice.',
+    } as const,
+    locale
+  );
   const statusLabel = isReviewed
-    ? 'Reviewed rights summary'
+    ? uiCopy.reviewedRightsSummary
     : editorialStatus === 'REVIEW'
-      ? 'Rights summary under review'
-      : 'Rights summary in progress';
+      ? uiCopy.rightsSummaryUnderReview
+      : uiCopy.rightsSummaryInProgress;
   const reviewNote =
     rightEntry?.reviewerNotes ??
     (isReviewed
-      ? 'This rights summary has been approved in LexIndia’s editorial workflow for public awareness use.'
-      : 'This rights summary is still in editorial review. Use it as an orientation aid and speak with a lawyer for case-specific advice.');
+      ? uiCopy.reviewedNoteApproved
+      : uiCopy.reviewedNoteReview);
 
   return (
     <div className="min-h-screen bg-muted pb-16">
@@ -101,20 +118,20 @@ export default async function RightsDetailPage({ params }: { params: Promise<{ s
             <span className={`rounded-full border px-3 py-1 font-semibold ${isReviewed ? 'border-success/30 bg-success/10 text-success' : 'border-warning/30 bg-warning/10 text-warning'}`}>
               {statusLabel}
             </span>
-            {rightEntry?.reviewedAt ? (
-              <span>
-                Reviewed on: {new Date(rightEntry.reviewedAt).toLocaleDateString('en-IN')}
-              </span>
-            ) : null}
-          </div>
-        </div>
-      </section>
+	            {rightEntry?.reviewedAt ? (
+	              <span>
+	                {uiCopy.reviewedOn}: {new Date(rightEntry.reviewedAt).toLocaleDateString('en-IN')}
+	              </span>
+	            ) : null}
+	          </div>
+	        </div>
+	      </section>
 
-      <section className={`border-b ${isReviewed ? 'border-success/20 bg-success/5' : 'border-warning/20 bg-warning/5'}`}>
-        <div className="mx-auto max-w-4xl px-4 py-3 text-xs text-foreground sm:px-6 lg:px-8">
-          <strong>Editorial note:</strong> {reviewNote}
-        </div>
-      </section>
+	      <section className={`border-b ${isReviewed ? 'border-success/20 bg-success/5' : 'border-warning/20 bg-warning/5'}`}>
+	        <div className="mx-auto max-w-4xl px-4 py-3 text-xs text-foreground sm:px-6 lg:px-8">
+	          <strong>{uiCopy.editorialNote}:</strong> {reviewNote}
+	        </div>
+	      </section>
 
       <section className="-mt-8 mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
         <div className="rounded-2xl border border-border bg-background p-6 shadow-sm">
@@ -149,12 +166,12 @@ export default async function RightsDetailPage({ params }: { params: Promise<{ s
 
           {discovery.lawLinks.length > 0 || discovery.guideLinks.length > 0 || discovery.knowledgeLinks.length > 0 ? (
             <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
-              {discovery.lawLinks.length > 0 ? (
-                <div className="rounded-xl border border-border bg-surface p-4">
-                  <h3 className="mb-3 text-sm font-semibold text-foreground">Related law sections</h3>
-                  <div className="space-y-3">
-                    {discovery.lawLinks.map((link) => (
-                      <Link key={link.href} href={link.href} className="block">
+	              {discovery.lawLinks.length > 0 ? (
+	                <div className="rounded-xl border border-border bg-surface p-4">
+	                  <h3 className="mb-3 text-sm font-semibold text-foreground">{uiCopy.relatedLawSections}</h3>
+	                  <div className="space-y-3">
+	                    {discovery.lawLinks.map((link) => (
+	                      <Link key={link.href} href={link.href} className="block">
                         <p className="text-sm font-medium text-primary hover:underline">{link.title}</p>
                         <p className="mt-1 text-xs text-muted-foreground">{link.description}</p>
                       </Link>
@@ -163,12 +180,12 @@ export default async function RightsDetailPage({ params }: { params: Promise<{ s
                 </div>
               ) : null}
 
-              {discovery.guideLinks.length > 0 ? (
-                <div className="rounded-xl border border-border bg-surface p-4">
-                  <h3 className="mb-3 text-sm font-semibold text-foreground">Related guides</h3>
-                  <div className="space-y-3">
-                    {discovery.guideLinks.map((link) => (
-                      <Link key={link.href} href={link.href} className="block">
+	              {discovery.guideLinks.length > 0 ? (
+	                <div className="rounded-xl border border-border bg-surface p-4">
+	                  <h3 className="mb-3 text-sm font-semibold text-foreground">{uiCopy.relatedGuides}</h3>
+	                  <div className="space-y-3">
+	                    {discovery.guideLinks.map((link) => (
+	                      <Link key={link.href} href={link.href} className="block">
                         <p className="text-sm font-medium text-primary hover:underline">{link.title}</p>
                         <p className="mt-1 text-xs text-muted-foreground">{link.description}</p>
                       </Link>
@@ -177,12 +194,12 @@ export default async function RightsDetailPage({ params }: { params: Promise<{ s
                 </div>
               ) : null}
 
-              {discovery.knowledgeLinks.length > 0 ? (
-                <div className="rounded-xl border border-border bg-surface p-4">
-                  <h3 className="mb-3 text-sm font-semibold text-foreground">Search related FAQs</h3>
-                  <div className="space-y-3">
-                    {discovery.knowledgeLinks.map((link) => (
-                      <Link key={link.href} href={link.href} className="block">
+	              {discovery.knowledgeLinks.length > 0 ? (
+	                <div className="rounded-xl border border-border bg-surface p-4">
+	                  <h3 className="mb-3 text-sm font-semibold text-foreground">{uiCopy.relatedFaqs}</h3>
+	                  <div className="space-y-3">
+	                    {discovery.knowledgeLinks.map((link) => (
+	                      <Link key={link.href} href={link.href} className="block">
                         <p className="text-sm font-medium text-primary hover:underline">{link.title}</p>
                         <p className="mt-1 text-xs text-muted-foreground">{link.description}</p>
                       </Link>
