@@ -1783,4 +1783,13 @@ async function main() {
   }
 }
 
-main();
+main().finally(() => {
+  // `tsx`/esbuild can leave open handles that keep the seed process alive even
+  // after all Prisma work is complete. A short delayed exit makes seeding more
+  // reliable without cutting off pending DB writes (we disconnect above).
+  const exitCode = process.exitCode ?? 0;
+  setTimeout(() => {
+    // eslint-disable-next-line no-process-exit
+    process.exit(exitCode);
+  }, 250).unref();
+});
