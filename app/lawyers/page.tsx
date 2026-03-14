@@ -12,6 +12,7 @@ import {
   Phone,
   Search,
   Star,
+  User,
   Video,
 } from 'lucide-react';
 import Image from 'next/image';
@@ -20,7 +21,6 @@ import { useSearchParams } from 'next/navigation';
 import LocaleLink from '@/components/LocaleLink';
 import { LawyersGridSkeleton } from '@/components/ui/Skeletons';
 import { useLanguage } from '@/lib/LanguageContext';
-import { getBookingCopy } from '@/lib/content/booking';
 import {
   formatLawyerCompactExperience,
   formatLawyerCurrency,
@@ -46,7 +46,6 @@ interface Lawyer {
 function LawyersContent() {
   const { lang, fontClass } = useLanguage();
   const t = getTranslation(lang);
-  const bookingCopy = getBookingCopy(lang);
   const searchParams = useSearchParams();
   const specializationLabel = t.dashboard.specializations.replace(/:$/, '');
   const verificationLabel = t.dashboard.statsVerified;
@@ -356,20 +355,11 @@ function LawyersContent() {
                         {lawyer.rating.toFixed(1)}
                         <span className="ml-1 font-normal text-success/80">({lawyer.reviewCount})</span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        {lawyer.consultationFee > 0 ? (
-                          <>
-                            <span className="text-lg font-medium text-muted-foreground line-through">
-                              {formatLawyerCurrency(lawyer.consultationFee, lang)}
-                            </span>
-                            <span className="text-2xl font-bold text-success">{formatLawyerCurrency(0, lang)}</span>
-                          </>
-                        ) : (
-                          <span className="text-xl font-bold tracking-tight text-foreground">{formatLawyerCurrency(0, lang)}</span>
-                        )}
+                      <div className="text-2xl font-bold text-foreground">
+                        {formatLawyerCurrency(lawyer.consultationFee, lang)}
                       </div>
-                      <div className="mt-1 rounded bg-success/10 px-2 py-1 text-xs font-bold text-success">
-                        {bookingCopy.firstConsultationFree}
+                      <div className="mt-1 text-xs font-medium text-muted-foreground">
+                        {t.lawyersPage.fees}
                       </div>
                     </div>
 
@@ -383,6 +373,9 @@ function LawyersContent() {
                         )}
                         {lawyer.modes.some((mode) => mode.mode === 'CHAT') && (
                           <MessageSquare className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
+                        )}
+                        {lawyer.modes.some((mode) => mode.mode === 'IN_PERSON') && (
+                          <User className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
                         )}
                       </div>
                       <LocaleLink

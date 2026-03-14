@@ -12,6 +12,9 @@ export async function GET(req: NextRequest) {
       include: {
         translations: true,
         faqs: {
+          where: {
+            editorialStatus: 'APPROVED',
+          },
           include: {
             translations: true,
           },
@@ -26,7 +29,7 @@ export async function GET(req: NextRequest) {
       faqs: category.faqs.map((faq: any) =>
         localizeFields(faq, faq.translations, locale, ['question', 'answer'])
       ),
-    }));
+    })).filter((category: any) => category.faqs.length > 0);
 
     return NextResponse.json({ categories: localizedCategories });
   } catch (error) {

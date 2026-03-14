@@ -21,6 +21,8 @@ import { getLocalizedText, localizeTreeFromMemory } from '@/lib/content/localize
 import { getPageFallbackContent } from '@/lib/content/page-fallbacks';
 import { shellCopy } from '@/lib/content/public-ui';
 import { useAuth } from '@/lib/AuthContext';
+import { getDashboardPath } from '@/lib/dashboard';
+import { useAdminQueueSummary } from '@/hooks/useAdminQueueSummary';
 import { useLanguage } from '@/lib/LanguageContext';
 import { type Language, languageNames } from '@/lib/translations';
 import { localizeHref } from '@/lib/i18n/navigation';
@@ -33,8 +35,10 @@ export default function Header() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const userRole = session?.user?.role?.toLowerCase() ?? null;
+  const dashboardHref = session?.user ? getDashboardPath(session.user) : null;
+  const adminQueueSummary = useAdminQueueSummary(Boolean(session?.user?.isAdmin));
   const guidesLabel = getPageFallbackContent('guides', lang).title;
+  const lawsLabel = localizeTreeFromMemory({ laws: 'Indian Laws' } as const, lang).laws;
   const noLanguagesFoundLabel = getLocalizedText(shellCopy.noLanguagesFound, lang);
   const logoutLabel = getLocalizedText(shellCopy.logout, lang);
   const copy = localizeTreeFromMemory(
@@ -95,6 +99,13 @@ export default function Header() {
           </LocaleLink>
           <LocaleLink href="/guides" className={`whitespace-nowrap text-sm font-medium text-muted-foreground transition-colors hover:text-primary xl:text-base ${fontClass}`}>
             {guidesLabel}
+          </LocaleLink>
+          <LocaleLink
+            href="/laws"
+            data-testid="header-laws-link"
+            className={`whitespace-nowrap text-sm font-medium text-muted-foreground transition-colors hover:text-primary xl:text-base ${fontClass}`}
+          >
+            {lawsLabel}
           </LocaleLink>
           <LocaleLink href="/templates" className={`whitespace-nowrap text-sm font-medium text-muted-foreground transition-colors hover:text-primary xl:text-base ${fontClass}`}>
             {t.nav.templates}
@@ -160,16 +171,18 @@ export default function Header() {
             )}
           </div>
 
-          {!userRole ? (
+          {!session?.user ? (
             <>
               <button
                 onClick={() => openAuthModal()}
+                data-testid="header-login-button"
                 className={`hidden font-medium text-primary transition-colors hover:opacity-80 sm:block ${fontClass}`}
               >
                 {t.nav.login}
               </button>
               <button
                 onClick={() => openAuthModal()}
+                data-testid="header-signup-button"
                 className={`hidden rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 sm:block ${fontClass}`}
               >
                 {t.nav.signup}
@@ -178,11 +191,17 @@ export default function Header() {
           ) : (
             <div className="flex items-center gap-3">
               <LocaleLink
-                href={`/dashboard/${userRole}`}
+                href={dashboardHref ?? '/dashboard/citizen'}
+                data-testid="header-dashboard-link"
                 className="hidden items-center gap-2 font-medium text-foreground transition-colors hover:text-primary sm:flex"
               >
                 <User className="h-5 w-5" />
                 {t.dashboard.title}
+                {session?.user?.isAdmin && adminQueueSummary.pendingTotal > 0 ? (
+                  <span data-testid="header-admin-review-badge" className="rounded-full bg-danger px-2 py-0.5 text-xs font-bold text-danger-foreground">
+                    {adminQueueSummary.pendingTotal}
+                  </span>
+                ) : null}
               </LocaleLink>
               <button
                 onClick={handleLogout}
@@ -219,6 +238,13 @@ export default function Header() {
             <LocaleLink href="/guides" onClick={() => setIsMobileMenuOpen(false)} className={`font-medium text-muted-foreground transition-colors hover:text-primary ${fontClass}`}>
               {guidesLabel}
             </LocaleLink>
+            <LocaleLink
+              href="/laws"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className={`font-medium text-muted-foreground transition-colors hover:text-primary ${fontClass}`}
+            >
+              {lawsLabel}
+            </LocaleLink>
             <LocaleLink href="/rights" onClick={() => setIsMobileMenuOpen(false)} className={`font-medium text-muted-foreground transition-colors hover:text-primary ${fontClass}`}>
               {t.nav.rights}
             </LocaleLink>
@@ -226,13 +252,14 @@ export default function Header() {
               {t.hero.forLawyers}
             </LocaleLink>
 
-            {!userRole ? (
+            {!session?.user ? (
               <div className="flex flex-col gap-3 border-t border-border pt-4 sm:hidden">
                 <button
                   onClick={() => {
                     setIsMobileMenuOpen(false);
                     openAuthModal();
                   }}
+                  data-testid="mobile-menu-login-button"
                   className={`py-2 text-center font-medium text-primary transition-colors hover:opacity-80 ${fontClass}`}
                 >
                   {t.nav.login}
@@ -242,6 +269,7 @@ export default function Header() {
                     setIsMobileMenuOpen(false);
                     openAuthModal();
                   }}
+                  data-testid="mobile-menu-signup-button"
                   className={`rounded-lg bg-primary px-4 py-2.5 text-center font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 ${fontClass}`}
                 >
                   {t.nav.signup}
@@ -250,12 +278,18 @@ export default function Header() {
             ) : (
               <div className="flex flex-col gap-3 border-t border-border pt-4 sm:hidden">
                 <LocaleLink
-                  href={`/dashboard/${userRole}`}
+                  href={dashboardHref ?? '/dashboard/citizen'}
+                  data-testid="mobile-menu-dashboard-link"
                   onClick={() => setIsMobileMenuOpen(false)}
                   className="flex items-center justify-center gap-2 py-2 font-medium text-foreground transition-colors hover:text-primary"
                 >
                   <User className="h-5 w-5" />
                   {t.dashboard.title}
+                  {session?.user?.isAdmin && adminQueueSummary.pendingTotal > 0 ? (
+                    <span data-testid="mobile-menu-admin-review-badge" className="rounded-full bg-danger px-2 py-0.5 text-xs font-bold text-danger-foreground">
+                      {adminQueueSummary.pendingTotal}
+                    </span>
+                  ) : null}
                 </LocaleLink>
                 <button
                   onClick={() => {

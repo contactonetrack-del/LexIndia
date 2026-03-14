@@ -22,7 +22,6 @@ export const LOCALE_COOKIE = 'lexindia_lang';
 export const THEME_COOKIE = 'lexindia_theme';
 export const REQUEST_LOCALE_HEADER = 'x-lexindia-locale';
 export const REQUEST_PATH_HEADER = 'x-lexindia-pathname';
-export const SITE_URL = 'https://lexindia.in';
 
 export type LocaleDirection = 'ltr' | 'rtl';
 export type LocaleScript =

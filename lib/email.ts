@@ -7,6 +7,7 @@
 
 import { Resend } from 'resend';
 import { formatDate as formatLocalizedDate, formatTime } from '@/lib/i18n/format';
+import { SITE_URL } from '@/lib/site';
 
 // Lazy-initialise so the module is safe to import even without the key
 function getResend() {
@@ -40,6 +41,7 @@ const modeLabel: Record<string, string> = {
   VIDEO: 'Video Call',
   CALL: 'Phone Call',
   CHAT: 'Chat / Messaging',
+  IN_PERSON: 'In-person Meeting',
 };
 
 // ─── Templates ────────────────────────────────────────────────────────────────
@@ -77,12 +79,12 @@ function citizenConfirmationHtml(params: {
       </div>
       <p style="color:#4b5563;font-size:13px;margin:0 0 20px;">The lawyer will reach out to confirm the session. If you need to reschedule, please contact us at least 24 hours before your appointment.</p>
       <div style="text-align:center;margin-bottom:24px;">
-        <a href="${process.env.NEXTAUTH_URL ?? 'https://lexindia.in'}/dashboard/citizen" style="background:#1E3A8A;color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:600;font-size:14px;">View My Appointments</a>
+        <a href="${SITE_URL}/dashboard/citizen" style="background:#1E3A8A;color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:600;font-size:14px;">View My Appointments</a>
       </div>
     </div>
     <!-- Footer -->
     <div style="padding:16px 28px;border-top:1px solid #f3f4f6;text-align:center;">
-      <p style="color:#9ca3af;font-size:11px;margin:0;">LexIndia — Connecting India to verified legal help. This is an automated email. <a href="${process.env.NEXTAUTH_URL ?? 'https://lexindia.in'}/disclaimer" style="color:#6b7280;">Legal Disclaimer</a></p>
+      <p style="color:#9ca3af;font-size:11px;margin:0;">LexIndia — Connecting India to verified legal help. This is an automated email. <a href="${SITE_URL}/disclaimer" style="color:#6b7280;">Legal Disclaimer</a></p>
     </div>
   </div>
 </body>
@@ -126,12 +128,12 @@ function lawyerAlertHtml(params: {
       ${notes ? `<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:14px;margin-bottom:20px;"><p style="color:#92400e;font-size:12px;font-weight:600;margin:0 0 4px;">Client's Note:</p><p style="color:#78350f;font-size:13px;margin:0;">${notes}</p></div>` : ''}
       <p style="color:#4b5563;font-size:13px;margin:0 0 20px;">Please log in to your dashboard to view the full booking and confirm the session with the client.</p>
       <div style="text-align:center;margin-bottom:24px;">
-        <a href="${process.env.NEXTAUTH_URL ?? 'https://lexindia.in'}/dashboard/lawyer" style="background:#1E3A8A;color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:600;font-size:14px;">View Appointments</a>
+        <a href="${SITE_URL}/dashboard/lawyer" style="background:#1E3A8A;color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:600;font-size:14px;">View Appointments</a>
       </div>
     </div>
     <!-- Footer -->
     <div style="padding:16px 28px;border-top:1px solid #f3f4f6;text-align:center;">
-      <p style="color:#9ca3af;font-size:11px;margin:0;">LexIndia Lawyer Portal — Automated notification. <a href="${process.env.NEXTAUTH_URL ?? 'https://lexindia.in'}/disclaimer" style="color:#6b7280;">Disclaimer</a></p>
+      <p style="color:#9ca3af;font-size:11px;margin:0;">LexIndia Lawyer Portal — Automated notification. <a href="${SITE_URL}/disclaimer" style="color:#6b7280;">Disclaimer</a></p>
     </div>
   </div>
 </body>

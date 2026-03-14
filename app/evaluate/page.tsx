@@ -49,7 +49,7 @@ const EVALUATE_PAGE = {
   categoryOther: 'Other or not sure',
   successTitle: 'You are on the list',
   successBody:
-    'Our legal triage team is reviewing your details. We will match you with an expert and call you at {phone} shortly to begin your free consultation.',
+    'Our legal triage team is reviewing your details. We will call you at {phone} shortly with next steps and expert matches.',
   successAction: 'Browse lawyers meantime',
   headerTitle: 'Free legal pre-screening',
   headerBody:

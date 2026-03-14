@@ -31,8 +31,11 @@ export async function middleware(req: NextRequest) {
   }
 
   const stripped = stripLocaleFromPathname(pathname);
+  const requestLocale = req.headers.get(REQUEST_LOCALE_HEADER);
+  const locale = stripped.locale ?? (requestLocale && requestLocale.length > 0 ? requestLocale : null);
+  const internalPathname = stripped.locale ? stripped.pathname : pathname;
 
-  if (!stripped.locale) {
+  if (!locale) {
     const locale = resolveRequestLocale({
       pathname,
       cookieLocale: req.cookies.get(LOCALE_COOKIE)?.value,
@@ -53,8 +56,6 @@ export async function middleware(req: NextRequest) {
     return response;
   }
 
-  const locale = stripped.locale;
-  const internalPathname = stripped.pathname;
   const isProtected = PROTECTED_ROUTES.some((route) => internalPathname.startsWith(route));
 
   if (isProtected) {
@@ -69,16 +70,29 @@ export async function middleware(req: NextRequest) {
 
   const requestHeaders = new Headers(req.headers);
   requestHeaders.set(REQUEST_LOCALE_HEADER, locale);
-  requestHeaders.set(REQUEST_PATH_HEADER, pathname);
+  requestHeaders.set(
+    REQUEST_PATH_HEADER,
+    req.headers.get(REQUEST_PATH_HEADER) ?? pathname
+  );
 
-  const rewriteUrl = req.nextUrl.clone();
-  rewriteUrl.pathname = internalPathname;
-
-  const response = NextResponse.rewrite(rewriteUrl, {
-    request: {
-      headers: requestHeaders,
-    },
-  });
+  const response = stripped.locale
+    ? NextResponse.rewrite(
+        (() => {
+          const rewriteUrl = req.nextUrl.clone();
+          rewriteUrl.pathname = internalPathname;
+          return rewriteUrl;
+        })(),
+        {
+          request: {
+            headers: requestHeaders,
+          },
+        }
+      )
+    : NextResponse.next({
+        request: {
+          headers: requestHeaders,
+        },
+      });
 
   response.cookies.set(LOCALE_COOKIE, locale, {
     httpOnly: false,

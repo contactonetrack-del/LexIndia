@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import {
   AlertTriangle,
   BookOpen,
@@ -24,6 +25,7 @@ import {
   PageShell,
   SurfaceCard,
 } from '@/components/ui/theme-primitives';
+import { localizeTreeFromMemory } from '@/lib/content/localized';
 import { getKnowledgeContent } from '@/lib/content/knowledge';
 import { useLanguage } from '@/lib/LanguageContext';
 
@@ -39,17 +41,55 @@ interface FAQCategory {
   faqs: FAQ[];
 }
 
+interface DiscoveryResult {
+  href: string;
+  title: string;
+  description: string;
+}
+
+interface DiscoveryResults {
+  guides: DiscoveryResult[];
+  rights: DiscoveryResult[];
+  laws: DiscoveryResult[];
+}
+
 const RESOURCE_ICONS = [Landmark, Smartphone];
+const DISCOVERY_COPY = {
+  title: 'Browse legal topics',
+  subtitle:
+    'Use the knowledge base for FAQs, rights pages for issue-led guidance, guides for procedures, and laws for section-by-section explainers.',
+  guidesTitle: 'Practical guides',
+  guidesBody: 'Follow step-by-step explainers for FIRs, bail, complaints, and property issues.',
+  rightsTitle: 'Rights summaries',
+  rightsBody: 'Start with plain-language issue pages when you do not know the exact law yet.',
+  lawsTitle: 'Acts and sections',
+  lawsBody: 'Read reviewed act summaries and plain-English section explainers.',
+  searchResultsTitle: 'Across LexIndia',
+  searchResultsBody:
+    'Search results span reviewed laws, rights pages, and practical guides while the FAQ list below keeps filtering in place.',
+  searchGuidesTitle: 'Guides',
+  searchRightsTitle: 'Rights',
+  searchLawsTitle: 'Laws and sections',
+} as const;
 
 export default function KnowledgeBase() {
   const { fontClass, lang, t } = useLanguage();
+  const searchParams = useSearchParams();
   const content = getKnowledgeContent(lang);
+  const discoveryCopy = localizeTreeFromMemory(DISCOVERY_COPY, lang);
   const searchAriaLabel = t.knowledge.searchPlaceholder;
+  const queryFromUrl = searchParams.get('q')?.trim() ?? '';
 
   const [categories, setCategories] = useState<FAQCategory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [openQ, setOpenQ] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(queryFromUrl);
+  const [searchResults, setSearchResults] = useState<DiscoveryResults>({
+    guides: [],
+    rights: [],
+    laws: [],
+  });
+  const [isSearching, setIsSearching] = useState(false);
 
   useEffect(() => {
     fetch(`/api/knowledge?locale=${lang}`)
@@ -60,6 +100,47 @@ export default function KnowledgeBase() {
       })
       .catch(() => setIsLoading(false));
   }, [lang]);
+
+  useEffect(() => {
+    setSearchQuery(queryFromUrl);
+  }, [queryFromUrl]);
+
+  useEffect(() => {
+    const normalizedQuery = searchQuery.trim();
+
+    if (normalizedQuery.length < 2) {
+      setSearchResults({ guides: [], rights: [], laws: [] });
+      setIsSearching(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => {
+      setIsSearching(true);
+      fetch(`/api/discovery/search?q=${encodeURIComponent(normalizedQuery)}`, {
+        signal: controller.signal,
+      })
+        .then((response) => response.json())
+        .then((data) => {
+          setSearchResults({
+            guides: data.guides || [],
+            rights: data.rights || [],
+            laws: data.laws || [],
+          });
+        })
+        .catch((error) => {
+          if (error.name !== 'AbortError') {
+            setSearchResults({ guides: [], rights: [], laws: [] });
+          }
+        })
+        .finally(() => setIsSearching(false));
+    }, 250);
+
+    return () => {
+      window.clearTimeout(timeout);
+      controller.abort();
+    };
+  }, [searchQuery]);
 
   const filteredCategories = categories
     .map((category) => ({
@@ -134,6 +215,53 @@ export default function KnowledgeBase() {
           buttonText={content.cta.button}
         />
 
+        <div className="mb-12 mt-12">
+          <div className="mb-6 max-w-3xl">
+            <h2 className={`mb-2 text-2xl font-bold text-foreground ${fontClass}`}>
+              {discoveryCopy.title}
+            </h2>
+            <p className={`text-sm text-muted-foreground ${fontClass}`}>{discoveryCopy.subtitle}</p>
+          </div>
+
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+            <SurfaceCard className="rounded-2xl p-6 transition-colors hover:border-primary/30">
+              <LocaleLink href="/guides" className="block">
+                <BookOpen className="mb-4 h-6 w-6 text-primary" />
+                <h3 className={`mb-2 text-lg font-bold text-foreground ${fontClass}`}>
+                  {discoveryCopy.guidesTitle}
+                </h3>
+                <p className={`text-sm text-muted-foreground ${fontClass}`}>
+                  {discoveryCopy.guidesBody}
+                </p>
+              </LocaleLink>
+            </SurfaceCard>
+
+            <SurfaceCard className="rounded-2xl p-6 transition-colors hover:border-primary/30">
+              <LocaleLink href="/rights" className="block">
+                <Shield className="mb-4 h-6 w-6 text-primary" />
+                <h3 className={`mb-2 text-lg font-bold text-foreground ${fontClass}`}>
+                  {discoveryCopy.rightsTitle}
+                </h3>
+                <p className={`text-sm text-muted-foreground ${fontClass}`}>
+                  {discoveryCopy.rightsBody}
+                </p>
+              </LocaleLink>
+            </SurfaceCard>
+
+            <SurfaceCard className="rounded-2xl p-6 transition-colors hover:border-primary/30">
+              <LocaleLink href="/laws" className="block">
+                <Landmark className="mb-4 h-6 w-6 text-primary" />
+                <h3 className={`mb-2 text-lg font-bold text-foreground ${fontClass}`}>
+                  {discoveryCopy.lawsTitle}
+                </h3>
+                <p className={`text-sm text-muted-foreground ${fontClass}`}>
+                  {discoveryCopy.lawsBody}
+                </p>
+              </LocaleLink>
+            </SurfaceCard>
+          </div>
+        </div>
+
         <div className="mb-12">
           <h2 className={`mb-6 text-2xl font-bold text-foreground ${fontClass}`}>
             {content.officialResourcesTitle}
@@ -164,6 +292,71 @@ export default function KnowledgeBase() {
             })}
           </div>
         </div>
+
+        {searchQuery.trim().length >= 2 ? (
+          <div className="mb-12">
+            <div className="mb-6 max-w-3xl">
+              <h2 className={`mb-2 text-2xl font-bold text-foreground ${fontClass}`}>
+                {discoveryCopy.searchResultsTitle}
+              </h2>
+              <p className={`text-sm text-muted-foreground ${fontClass}`}>
+                {isSearching ? t.common.loading : discoveryCopy.searchResultsBody}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+              {[
+                {
+                  id: 'guides',
+                  title: discoveryCopy.searchGuidesTitle,
+                  items: searchResults.guides,
+                },
+                {
+                  id: 'rights',
+                  title: discoveryCopy.searchRightsTitle,
+                  items: searchResults.rights,
+                },
+                {
+                  id: 'laws',
+                  title: discoveryCopy.searchLawsTitle,
+                  items: searchResults.laws,
+                },
+              ].map((group) => (
+                <SurfaceCard
+                  key={group.title}
+                  data-testid={`knowledge-search-group-${group.id}`}
+                  className="rounded-2xl p-6"
+                >
+                  <h3 className={`mb-4 text-lg font-bold text-foreground ${fontClass}`}>
+                    {group.title}
+                  </h3>
+                  <div className="space-y-3">
+                    {group.items.length > 0 ? (
+                      group.items.map((item) => (
+                        <LocaleLink
+                          key={`${group.title}-${item.href}`}
+                          href={item.href}
+                          className="block rounded-xl border border-border bg-surface p-4 transition-colors hover:border-primary/30"
+                        >
+                          <p className={`text-sm font-semibold text-foreground ${fontClass}`}>
+                            {item.title}
+                          </p>
+                          <p className={`mt-1 text-sm text-muted-foreground ${fontClass}`}>
+                            {item.description}
+                          </p>
+                        </LocaleLink>
+                      ))
+                    ) : (
+                      <p className={`text-sm text-muted-foreground ${fontClass}`}>
+                        {isSearching ? t.common.loading : t.common.noResults}
+                      </p>
+                    )}
+                  </div>
+                </SurfaceCard>
+              ))}
+            </div>
+          </div>
+        ) : null}
 
         <div className="space-y-8">
           {isLoading ? (

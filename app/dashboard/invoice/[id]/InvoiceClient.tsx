@@ -53,6 +53,7 @@ export default function InvoiceClient({ appointment }: Props) {
     modeVideo: 'Video',
     modeCall: 'Call',
     modeChat: 'Chat',
+    modeInPerson: 'In person',
     paymentPaid: 'Paid',
     paymentPending: 'Pending',
     paymentFailed: 'Failed',
@@ -68,6 +69,8 @@ export default function InvoiceClient({ appointment }: Props) {
         ? copy.modeCall
         : appointment.mode === 'CHAT'
           ? copy.modeChat
+          : appointment.mode === 'IN_PERSON'
+            ? copy.modeInPerson
           : appointment.mode;
 
   const paymentStatusLabel =

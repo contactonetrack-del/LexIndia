@@ -22,7 +22,7 @@ export function ConsultationCTA({
   const fallbackCopy = localizeTreeFromMemory(
     {
       title: 'Ready to discuss your legal matter?',
-      description: 'Get matched with a verified expert. The first consultation is free.',
+      description: 'Get matched with a verified expert and book a consultation securely.',
       buttonText: 'Find a Lawyer Now',
     } as const,
     lang

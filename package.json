@@ -8,6 +8,9 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
+    "test:unit": "node scripts/run-unit-tests.cjs",
+    "search:indexes": "node scripts/verify-discovery-search.cjs",
+    "search:verify": "node scripts/verify-discovery-search.cjs",
     "messages:sync": "tsx scripts/sync-messages.ts",
     "check:theme": "tsx scripts/compliance.ts theme",
     "check:i18n": "tsx scripts/compliance.ts i18n",
@@ -15,6 +18,7 @@
     "audit:compliance": "tsx scripts/compliance.ts audit",
     "baseline:compliance": "tsx scripts/compliance.ts baseline",
     "test:browser": "playwright test",
+    "test:browser:auth": "node scripts/run-authenticated-browser-tests.js",
     "clean": "next clean",
     "postinstall": "prisma generate"
   },

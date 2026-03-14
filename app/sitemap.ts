@@ -1,8 +1,9 @@
 import type { MetadataRoute } from 'next';
 
-import { SITE_URL, SUPPORTED_LOCALES } from '@/lib/i18n/config';
+import { SUPPORTED_LOCALES } from '@/lib/i18n/config';
 import { withLocalePrefix } from '@/lib/i18n/navigation';
 import { prisma } from '@/lib/prisma';
+import { SITE_URL } from '@/lib/site';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,19 +22,47 @@ function localizedEntries(
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const lawyers = await prisma.lawyerProfile.findMany({
-    where: { isVerified: true },
-    select: { id: true, user: { select: { updatedAt: true } } },
-  });
+  const [lawyers, approvedActs] = await Promise.all([
+    prisma.lawyerProfile.findMany({
+      where: { isVerified: true },
+      select: { id: true, user: { select: { updatedAt: true } } },
+    }),
+    prisma.legalAct.findMany({
+      where: { editorialStatus: 'APPROVED' },
+      select: {
+        slug: true,
+        updatedAt: true,
+        sections: {
+          where: { editorialStatus: 'APPROVED' },
+          select: {
+            sectionKey: true,
+            updatedAt: true,
+          },
+        },
+      },
+    }),
+  ]);
 
   const lawyerUrls = lawyers.flatMap((lawyer: any) =>
     localizedEntries(`/lawyers/${lawyer.id}`, 'weekly', 0.8, lawyer.user.updatedAt || new Date())
   );
+  const lawUrls = approvedActs.flatMap((act) => [
+    ...localizedEntries(`/laws/${act.slug}`, 'weekly', 0.82, act.updatedAt || new Date()),
+    ...act.sections.flatMap((section) =>
+      localizedEntries(
+        `/laws/${act.slug}/${encodeURIComponent(section.sectionKey)}`,
+        'monthly',
+        0.78,
+        section.updatedAt || act.updatedAt || new Date()
+      )
+    ),
+  ]);
 
   const staticRoutes: MetadataRoute.Sitemap = [
     ...localizedEntries('/', 'weekly', 1),
     ...localizedEntries('/lawyers', 'daily', 0.9),
     ...localizedEntries('/knowledge', 'weekly', 0.8),
+    ...localizedEntries('/laws', 'weekly', 0.85),
     ...localizedEntries('/templates', 'weekly', 0.8),
     ...localizedEntries('/rights', 'monthly', 0.8),
     ...localizedEntries('/rights/women', 'monthly', 0.7),
@@ -62,5 +91,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...localizedEntries('/disclaimer', 'yearly', 0.3),
   ];
 
-  return [...staticRoutes, ...lawyerUrls];
+  return [...staticRoutes, ...lawyerUrls, ...lawUrls];
 }

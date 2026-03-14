@@ -58,6 +58,7 @@ type AppointmentCardCopy = {
   modeVideo: string;
   modeCall: string;
   modeChat: string;
+  modeInPerson: string;
   legalExpert: string;
   profile: string;
   invoice: string;
@@ -70,6 +71,7 @@ const MODE_ICON_COMPONENTS: Record<string, LucideIcon> = {
   VIDEO: Video,
   CALL: Phone,
   CHAT: MessageSquare,
+  IN_PERSON: User,
 };
 
 const STATUS_CLASSES: Record<string, string> = {
@@ -119,6 +121,8 @@ function AppointmentCard({
         ? copy.modeCall
         : appointment.mode === 'CHAT'
           ? copy.modeChat
+          : appointment.mode === 'IN_PERSON'
+            ? copy.modeInPerson
           : appointment.mode;
 
   return (
@@ -272,6 +276,7 @@ export default function CitizenDashboardClient({
     modeVideo: 'Video',
     modeCall: 'Call',
     modeChat: 'Chat',
+    modeInPerson: 'In person',
     legalExpert: 'Legal expert',
     profile: 'Profile',
     invoice: 'Invoice',
@@ -299,6 +304,7 @@ export default function CitizenDashboardClient({
     modeVideo: localizedCopy.modeVideo,
     modeCall: localizedCopy.modeCall,
     modeChat: localizedCopy.modeChat,
+    modeInPerson: localizedCopy.modeInPerson,
     legalExpert: localizedCopy.legalExpert,
     profile: localizedCopy.profile,
     invoice: localizedCopy.invoice,

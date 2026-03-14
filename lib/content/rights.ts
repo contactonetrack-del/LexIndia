@@ -302,3 +302,8 @@ export function getRightsCategories(locale: Locale) {
   }));
 }
 
+export const RIGHT_REGISTRY_SEED_RECORDS = rightsCategories.map((category) => ({
+  slug: category.slug,
+  title: getLocalizedText(category.title, 'en'),
+  editorialStatus: 'APPROVED' as const,
+}));

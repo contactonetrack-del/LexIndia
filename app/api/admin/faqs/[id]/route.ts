@@ -1,0 +1,83 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+
+import { isAdminUser } from '@/lib/admin';
+import { authOptions } from '@/lib/auth';
+import { normalizeEditorialStatus } from '@/lib/editorial-review';
+import { getApiLocalizedText } from '@/lib/i18n/api';
+import prisma from '@/lib/prisma';
+
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: getApiLocalizedText(req, 'Authentication required.') }, { status: 401 });
+  }
+
+  if (!isAdminUser(session.user)) {
+    return NextResponse.json(
+      { error: getApiLocalizedText(req, 'Admin access is required.') },
+      { status: 403 }
+    );
+  }
+
+  const { id } = await params;
+  let body: Record<string, unknown>;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: getApiLocalizedText(req, 'Invalid request body.') }, { status: 400 });
+  }
+
+  const editorialStatus = normalizeEditorialStatus(
+    typeof body.editorialStatus === 'string' ? body.editorialStatus : null
+  );
+  const reviewerNotes = typeof body.reviewerNotes === 'string' ? body.reviewerNotes.trim() : '';
+
+  try {
+    const faq = await prisma.$transaction(async (tx) => {
+      const updatedFaq = await tx.fAQ.update({
+        where: { id },
+        data: {
+          editorialStatus,
+          reviewerNotes: reviewerNotes || null,
+          reviewedAt: new Date(),
+          reviewedById: session.user.id,
+        },
+        include: {
+          category: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+          reviewLogs: {
+            orderBy: { createdAt: 'desc' },
+            take: 3,
+          },
+        },
+      });
+
+      await tx.fAQReviewLog.create({
+        data: {
+          faqId: id,
+          status: editorialStatus,
+          notes: reviewerNotes || null,
+          reviewedById: session.user.id,
+        },
+      });
+
+      return updatedFaq;
+    });
+
+    return NextResponse.json({ faq });
+  } catch (error) {
+    console.error('[Admin FAQs API] PATCH error:', error);
+    return NextResponse.json(
+      { error: getApiLocalizedText(req, 'Failed to update FAQ review status.') },
+      { status: 500 }
+    );
+  }
+}

@@ -28,7 +28,7 @@ export function SocialProofToast() {
       downloadedTemplate: '{name} downloaded the {document}',
       videoCallTemplate: '{name} booked a video call with {lawyer} from {location}',
       foundLawyerTemplate: '{name} found a trusted lawyer in {location}',
-      savedMoneyTemplate: '{name} saved on the first consultation',
+      savedMoneyTemplate: '{name} viewed a verified lawyer profile',
     } as const,
     lang
   );

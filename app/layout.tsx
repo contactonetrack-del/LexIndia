@@ -4,7 +4,6 @@ import { cookies } from 'next/headers';
 import './globals.css';
 import { Toaster } from 'react-hot-toast';
 
-import AccessibilityControls from '@/components/AccessibilityControls';
 import { AriaAnnouncerProvider } from '@/components/AriaAnnouncer';
 import AuthModalWrapper from '@/components/AuthModalWrapper';
 import Chatbot from '@/components/Chatbot';
@@ -20,13 +19,14 @@ import { ExitIntentPopup } from '@/components/ui/ExitIntentPopup';
 import { SocialProofToast } from '@/components/ui/SocialProofToast';
 import { AuthProvider } from '@/lib/AuthContext';
 import { getMemoryLocalizedText } from '@/lib/content/localized';
-import { getLocaleOpenGraph, SITE_URL, THEME_COOKIE } from '@/lib/i18n/config';
+import { getLocaleOpenGraph, THEME_COOKIE } from '@/lib/i18n/config';
 import { getLocaleFontStyle, fontVariablesClassName } from '@/lib/i18n/fonts';
 import { buildLocalizedAlternates } from '@/lib/i18n/metadata';
 import { getMessages } from '@/lib/i18n/messages';
 import { getRequestDirection, getRequestLocale } from '@/lib/i18n/request';
 import { withLocalePrefix } from '@/lib/i18n/navigation';
 import { LanguageProvider } from '@/lib/LanguageContext';
+import { SITE_URL } from '@/lib/site';
 import { languageNames } from '@/lib/translations';
 
 const themeBootstrapScript = `
@@ -161,7 +161,6 @@ export default async function RootLayout({
                     <ExitIntentPopup />
                     <AuthModalWrapper />
                     <MobileNav />
-                    <AccessibilityControls />
                   </div>
                 </ThemeProvider>
               </LanguageProvider>

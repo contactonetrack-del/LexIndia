@@ -9,6 +9,7 @@ eslint.txt
 build.out
 test-results/
 untracked_files.txt
+.vscode/
 .env*
 !.env.example
 

@@ -1,14 +1,16 @@
 'use client';
 
 import React from 'react';
-import { BookOpen, Home, Search, User } from 'lucide-react';
+import { BookOpen, Home, Landmark, Search, User } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 
 import LocaleLink from '@/components/LocaleLink';
-import { getLocalizedText } from '@/lib/content/localized';
+import { getLocalizedText, localizeTreeFromMemory } from '@/lib/content/localized';
 import { shellCopy } from '@/lib/content/public-ui';
 import { useAuth } from '@/lib/AuthContext';
+import { getDashboardPath } from '@/lib/dashboard';
+import { useAdminQueueSummary } from '@/hooks/useAdminQueueSummary';
 import { useLanguage } from '@/lib/LanguageContext';
 import { getPathWithoutLocale } from '@/lib/i18n/navigation';
 
@@ -18,13 +20,16 @@ export default function MobileNav() {
   const { data: session } = useSession();
   const { fontClass, lang, t } = useLanguage();
 
-  const userRole = session?.user?.role?.toLowerCase() ?? null;
+  const dashboardHref = session?.user ? getDashboardPath(session.user) : null;
+  const adminQueueSummary = useAdminQueueSummary(Boolean(session?.user?.isAdmin));
   const currentPath = getPathWithoutLocale(pathname || '/');
   const homeLabel = getLocalizedText(shellCopy.home, lang);
+  const lawsLabel = localizeTreeFromMemory({ laws: 'Indian Laws' } as const, lang).laws;
 
   const navItems = [
     { name: homeLabel, href: '/', icon: Home },
     { name: t.nav.lawyers, href: '/lawyers', icon: Search },
+    { name: lawsLabel, href: '/laws', icon: Landmark },
     { name: t.nav.rights, href: '/rights', icon: BookOpen },
   ];
 
@@ -38,6 +43,7 @@ export default function MobileNav() {
             <LocaleLink
               key={item.name}
               href={item.href}
+              data-testid={item.href === '/laws' ? 'mobile-nav-laws-link' : undefined}
               className={`flex h-full w-full flex-col items-center justify-center space-y-1 ${isActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
             >
               <Icon className={`h-5 w-5 ${isActive ? 'fill-primary/10' : ''}`} />
@@ -46,17 +52,26 @@ export default function MobileNav() {
           );
         })}
 
-        {userRole ? (
+        {session?.user ? (
           <LocaleLink
-            href={`/dashboard/${userRole}`}
+            href={dashboardHref ?? '/dashboard/citizen'}
+            data-testid="mobile-nav-dashboard-link"
             className={`flex h-full w-full flex-col items-center justify-center space-y-1 ${currentPath.startsWith('/dashboard') ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
           >
-            <User className={`h-5 w-5 ${currentPath.startsWith('/dashboard') ? 'fill-primary/10' : ''}`} />
+            <span className="relative">
+              <User className={`h-5 w-5 ${currentPath.startsWith('/dashboard') ? 'fill-primary/10' : ''}`} />
+              {session.user.isAdmin && adminQueueSummary.pendingTotal > 0 ? (
+                <span data-testid="mobile-nav-admin-review-badge" className="absolute -right-2 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-danger px-1 text-[9px] font-bold leading-none text-danger-foreground">
+                  {adminQueueSummary.pendingTotal > 9 ? '9+' : adminQueueSummary.pendingTotal}
+                </span>
+              ) : null}
+            </span>
             <span className={`text-[10px] font-medium ${fontClass}`}>{t.dashboard.title}</span>
           </LocaleLink>
         ) : (
           <button
             onClick={() => openAuthModal()}
+            data-testid="mobile-nav-login-button"
             className="flex h-full w-full flex-col items-center justify-center space-y-1 text-muted-foreground transition-colors hover:text-foreground"
           >
             <User className="h-5 w-5" />

@@ -34,8 +34,6 @@ interface LawyerInfo {
   specializations: { name: string }[];
   modes: { mode: string }[];
 }
-
-const TIME_SLOTS = ['10:00', '11:30', '14:00', '16:30', '18:00'] as const;
 const MODE_ICON_COMPONENTS: Record<string, React.ComponentType<{ className?: string }>> = {
   VIDEO: Video,
   CALL: Phone,
@@ -94,8 +92,13 @@ export default function BookingPageClient({ lawyerId }: { lawyerId: string }) {
   const copy = getBookingCopy(lang);
   const bookingUiCopy = localizeTreeFromMemory(
     {
-      gstLabel: 'GST (18%)',
       paymentDescription: 'Book a consultation with {name}',
+      confirmBooking: 'Confirm and continue to payment',
+      verifiedLawyer: 'Verified lawyer',
+      loadingSlots: 'Loading available slots...',
+      blockedDate: 'This lawyer is unavailable on the selected date. Please choose another day.',
+      noSlots: 'No slots are available on this date. Please choose another day.',
+      slotsUnavailable: 'Unable to load this lawyer availability right now.',
     } as const,
     lang
   );
@@ -108,6 +111,9 @@ export default function BookingPageClient({ lawyerId }: { lawyerId: string }) {
   const [selectedMode, setSelectedMode] = useState('');
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedTime, setSelectedTime] = useState('');
+  const [availableSlots, setAvailableSlots] = useState<string[]>([]);
+  const [availabilityLoading, setAvailabilityLoading] = useState(false);
+  const [availabilityError, setAvailabilityError] = useState<string | null>(null);
   const [issueDesc, setIssueDesc] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -145,9 +151,61 @@ export default function BookingPageClient({ lawyerId }: { lawyerId: string }) {
     loadLawyer();
   }, [loadLawyer]);
 
-  const isFirstConsultation = true;
-  const total =
-    isFirstConsultation || !lawyer ? 0 : lawyer.consultationFee + Math.round(lawyer.consultationFee * 0.18);
+  useEffect(() => {
+    if (!selectedDate || !lawyerId) {
+      setAvailableSlots([]);
+      setAvailabilityError(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadAvailability = async () => {
+      setAvailabilityLoading(true);
+      setAvailabilityError(null);
+
+      try {
+        const response = await fetch(`/api/lawyers/${lawyerId}/availability?date=${selectedDate}`, {
+          headers: {
+            [REQUEST_LOCALE_HEADER]: lang,
+          },
+        });
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error ?? bookingUiCopy.slotsUnavailable);
+        }
+
+        if (!cancelled) {
+          const nextSlots = Array.isArray(data.availableSlots) ? data.availableSlots : [];
+          setAvailableSlots(nextSlots);
+          setSelectedTime((current) => (nextSlots.includes(current) ? current : ''));
+          if (data.isBlockedDate) {
+            setAvailabilityError(bookingUiCopy.blockedDate);
+          }
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setAvailableSlots([]);
+          setAvailabilityError(
+            error instanceof Error ? error.message : bookingUiCopy.slotsUnavailable
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setAvailabilityLoading(false);
+        }
+      }
+    };
+
+    loadAvailability();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [bookingUiCopy.blockedDate, bookingUiCopy.slotsUnavailable, lang, lawyerId, selectedDate]);
+
+  const total = lawyer ? lawyer.consultationFee : 0;
 
   const handleConfirmBooking = async () => {
     if (!session?.user || !lawyer) return;
@@ -409,12 +467,15 @@ export default function BookingPageClient({ lawyerId }: { lawyerId: string }) {
               <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-primary-foreground/80">
                 <span>{lawyer.specializations[0]?.name ?? copy.legalExpert}</span>
                 <span>&bull;</span>
-                <span className="line-through opacity-70">
+                <span className="font-semibold text-primary-foreground">
                   {formatCurrency(lawyer.consultationFee, displayLocale)}
                 </span>
-                <span className="rounded border border-success/30 bg-success/20 px-2 py-0.5 text-xs font-bold text-success">
-                  {copy.firstConsultationFree}
-                </span>
+                {lawyer.isVerified ? (
+                  <span className="inline-flex items-center gap-1 rounded border border-success/30 bg-success/20 px-2 py-0.5 text-xs font-bold text-success">
+                    <ShieldCheck className="h-3.5 w-3.5" />
+                    {bookingUiCopy.verifiedLawyer}
+                  </span>
+                ) : null}
               </div>
             </div>
           </div>
@@ -431,6 +492,7 @@ export default function BookingPageClient({ lawyerId }: { lawyerId: string }) {
                       return (
                         <button
                           key={mode}
+                          data-testid={`booking-mode-${mode}`}
                           onClick={() => setSelectedMode(mode)}
                           className={`flex flex-col items-center justify-center rounded-xl border-2 p-4 transition-all ${
                             selectedMode === mode
@@ -456,6 +518,7 @@ export default function BookingPageClient({ lawyerId }: { lawyerId: string }) {
                     <CalendarIcon className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
                     <input
                       type="date"
+                      data-testid="booking-date-input"
                       value={selectedDate}
                       onChange={(event) => {
                         setSelectedDate(event.target.value);
@@ -471,26 +534,43 @@ export default function BookingPageClient({ lawyerId }: { lawyerId: string }) {
                   <div>
                     <h3 className="mb-4 text-lg font-semibold text-foreground">{copy.selectTime}</h3>
                     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                      {TIME_SLOTS.map((time) => (
-                        <button
-                          key={time}
-                          onClick={() => setSelectedTime(time)}
-                          className={`flex items-center justify-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-all ${
-                            selectedTime === time
-                              ? 'border-primary bg-primary text-primary-foreground shadow-md'
-                              : 'border-border bg-background text-foreground hover:border-primary/30 hover:bg-surface'
-                          }`}
-                        >
-                          <Clock className="h-4 w-4" />
-                          {formatTimeSlot(time, displayLocale)}
-                        </button>
-                      ))}
+                      {availabilityLoading ? (
+                        <div className="col-span-full flex items-center gap-2 rounded-xl border border-border bg-surface/60 px-4 py-3 text-sm text-muted-foreground">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          {bookingUiCopy.loadingSlots}
+                        </div>
+                      ) : availabilityError ? (
+                        <div data-testid="booking-availability-message" className="col-span-full rounded-xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
+                          {availabilityError}
+                        </div>
+                      ) : availableSlots.length === 0 ? (
+                        <div data-testid="booking-availability-message" className="col-span-full rounded-xl border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
+                          {bookingUiCopy.noSlots}
+                        </div>
+                      ) : (
+                        availableSlots.map((time) => (
+                          <button
+                            key={time}
+                            data-testid={`booking-time-${time.replace(':', '-')}`}
+                            onClick={() => setSelectedTime(time)}
+                            className={`flex items-center justify-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-all ${
+                              selectedTime === time
+                                ? 'border-primary bg-primary text-primary-foreground shadow-md'
+                                : 'border-border bg-background text-foreground hover:border-primary/30 hover:bg-surface'
+                            }`}
+                          >
+                            <Clock className="h-4 w-4" />
+                            {formatTimeSlot(time, displayLocale)}
+                          </button>
+                        ))
+                      )}
                     </div>
                   </div>
                 )}
 
                 <button
                   onClick={() => setStep(2)}
+                  data-testid="booking-continue-step1"
                   disabled={!selectedMode || !selectedDate || !selectedTime}
                   className="mt-4 w-full rounded-xl bg-accent py-4 font-bold text-accent-foreground transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                 >
@@ -560,24 +640,13 @@ export default function BookingPageClient({ lawyerId }: { lawyerId: string }) {
                   <div className="space-y-3 border-t border-border pt-4">
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">{t.lawyersPage.fees}</span>
-                      <span className="font-medium text-muted-foreground line-through">
+                      <span className="font-medium text-foreground">
                         {formatCurrency(lawyer.consultationFee, displayLocale)}
                       </span>
                     </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">{bookingUiCopy.gstLabel}</span>
-                      <span className="font-medium text-muted-foreground line-through">
-                        {formatCurrency(Math.round(lawyer.consultationFee * 0.18), displayLocale)}
-                      </span>
-                    </div>
                     <div className="mt-2 flex justify-between border-t border-border pt-2 text-lg font-bold">
-                      <span className="flex items-center gap-2 text-foreground">
-                        {copy.totalLabel}
-                        <span className="rounded bg-success/10 px-2 py-1 text-xs font-bold text-success">
-                          {copy.firstFree}
-                        </span>
-                      </span>
-                      <span className="text-success">{copy.free}</span>
+                      <span className="text-foreground">{copy.totalLabel}</span>
+                      <span className="text-foreground">{formatCurrency(total, displayLocale)}</span>
                     </div>
                   </div>
                 </div>
@@ -605,7 +674,7 @@ export default function BookingPageClient({ lawyerId }: { lawyerId: string }) {
                       {t.common.loading}
                     </>
                   ) : (
-                    copy.confirmFreeBooking
+                    bookingUiCopy.confirmBooking
                   )}
                 </button>
                 <p className="text-center text-xs text-muted-foreground">

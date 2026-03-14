@@ -31,6 +31,19 @@ model User {
   receivedMessages Message[] @relation("ReceivedMessages")
   reviews          Review[]
   caseNotes        CaseNote[]
+  reviewedVerificationCases LawyerVerificationCase[] @relation("LawyerVerificationReviewedBy")
+  reviewedTemplates         DocumentTemplate[]       @relation("TemplateReviewedBy")
+  templateReviewLogs        TemplateReviewLog[]      @relation("TemplateReviewLogReviewedBy")
+  reviewedFAQs              FAQ[]                    @relation("FAQReviewedBy")
+  faqReviewLogs             FAQReviewLog[]           @relation("FAQReviewLogReviewedBy")
+  reviewedGuides            GuideEntry[]             @relation("GuideReviewedBy")
+  guideReviewLogs           GuideReviewLog[]         @relation("GuideReviewLogReviewedBy")
+  reviewedRights            RightEntry[]             @relation("RightReviewedBy")
+  rightReviewLogs           RightReviewLog[]         @relation("RightReviewLogReviewedBy")
+  reviewedLegalActs         LegalAct[]               @relation("LegalActReviewedBy")
+  legalActReviewLogs        LegalActReviewLog[]      @relation("LegalActReviewLogReviewedBy")
+  reviewedLawSections       LawSection[]             @relation("LawSectionReviewedBy")
+  lawSectionReviewLogs      LawSectionReviewLog[]    @relation("LawSectionReviewLogReviewedBy")
 }
 
 model Account {
@@ -86,7 +99,6 @@ model LawyerProfile {
   rating            Float    @default(0.0)
   reviewCount       Int      @default(0)
   consultationFee   Float
-  consultationModes String[] // e.g., ["VIDEO", "CALL", "IN_PERSON"]
   profileViews      Int      @default(0)
   isVerified        Boolean  @default(false)
   barCouncilID      String?  @unique
@@ -98,6 +110,11 @@ model LawyerProfile {
   specializations   Specialization[]
   translations      LawyerProfileTranslation[]
   modes             LawyerConsultationMode[]
+  availabilitySlots AvailabilitySlot[]
+  availabilityExceptions AvailabilityDateException[]
+  availabilitySlotOverrides AvailabilitySlotOverride[]
+  verificationDocuments VerificationDocument[]
+  verificationCases LawyerVerificationCase[]
   appointments      Appointment[] @relation("LawyerAppointments")
   reviews           Review[]      @relation("LawyerReviews")
 
@@ -127,6 +144,63 @@ model LawyerConsultationMode {
   lawyerProfile   LawyerProfile @relation(fields: [lawyerProfileId], references: [id], onDelete: Cascade)
 
   @@unique([mode, lawyerProfileId])
+}
+
+model AvailabilitySlot {
+  id              String        @id @default(cuid())
+  lawyerProfileId String
+  weekday         Int
+  time            String
+  lawyerProfile   LawyerProfile @relation(fields: [lawyerProfileId], references: [id], onDelete: Cascade)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@unique([lawyerProfileId, weekday, time])
+  @@index([lawyerProfileId, weekday])
+}
+
+model AvailabilityDateException {
+  id              String        @id @default(cuid())
+  lawyerProfileId String
+  dateKey         String
+  lawyerProfile   LawyerProfile @relation(fields: [lawyerProfileId], references: [id], onDelete: Cascade)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@unique([lawyerProfileId, dateKey])
+  @@index([lawyerProfileId, dateKey])
+}
+
+model AvailabilitySlotOverride {
+  id              String        @id @default(cuid())
+  lawyerProfileId String
+  dateKey         String
+  time            String
+  action          String
+  lawyerProfile   LawyerProfile @relation(fields: [lawyerProfileId], references: [id], onDelete: Cascade)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@unique([lawyerProfileId, dateKey, time])
+  @@index([lawyerProfileId, dateKey, action])
+}
+
+model VerificationDocument {
+  id              String        @id @default(cuid())
+  lawyerProfileId String
+  kind            String
+  fileName        String
+  mimeType        String
+  sizeBytes       Int
+  storageProvider String        @default("DATABASE")
+  storageBucket   String?
+  storagePath     String?
+  data            Bytes?
+  lawyerProfile   LawyerProfile @relation(fields: [lawyerProfileId], references: [id], onDelete: Cascade)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([lawyerProfileId, kind, createdAt])
 }
 
 model Appointment {
@@ -213,14 +287,250 @@ model FAQCategory {
 }
 
 model FAQ {
-  id           String           @id @default(cuid())
-  question     String
-  answer       String
-  categoryId   String
-  category     FAQCategory      @relation(fields: [categoryId], references: [id])
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @updatedAt
-  translations FAQTranslation[]
+  id              String           @id @default(cuid())
+  question        String
+  answer          String
+  categoryId      String
+  category        FAQCategory      @relation(fields: [categoryId], references: [id])
+  editorialStatus String           @default("REVIEW")
+  reviewerNotes   String?          @db.Text
+  reviewedAt      DateTime?
+  reviewedById    String?
+  reviewedBy      User?            @relation("FAQReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  translations    FAQTranslation[]
+  reviewLogs      FAQReviewLog[]
+}
+
+model GuideEntry {
+  id                String         @id @default(cuid())
+  slug              String         @unique
+  title             String
+  category          String
+  readTime          Int?
+  hasPublishedContent Boolean      @default(false)
+  editorialStatus   String         @default("DRAFT")
+  reviewerNotes     String?        @db.Text
+  reviewedAt        DateTime?
+  reviewedById      String?
+  reviewedBy        User?          @relation("GuideReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  reviewLogs        GuideReviewLog[]
+
+  @@index([editorialStatus, updatedAt])
+}
+
+model RightEntry {
+  id              String          @id @default(cuid())
+  slug            String          @unique
+  title           String
+  editorialStatus String          @default("REVIEW")
+  reviewerNotes   String?         @db.Text
+  reviewedAt      DateTime?
+  reviewedById    String?
+  reviewedBy      User?           @relation("RightReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  reviewLogs      RightReviewLog[]
+
+  @@index([editorialStatus, updatedAt])
+}
+
+model LegalAct {
+  id                String              @id @default(cuid())
+  slug              String              @unique
+  shortCode         String              @unique
+  title             String
+  description       String              @db.Text
+  sourceAuthority   String?
+  sourceUrl         String?             @db.Text
+  sourcePdfUrl      String?             @db.Text
+  editorialStatus   String              @default("REVIEW")
+  reviewerNotes     String?             @db.Text
+  reviewedAt        DateTime?
+  reviewedById      String?
+  reviewedBy        User?               @relation("LegalActReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  sections          LawSection[]
+  versions          LegalActVersion[]
+  issueTopics       LegalIssueTopic[]
+  outgoingRelations LegalActRelation[]  @relation("LegalActRelationFrom")
+  incomingRelations LegalActRelation[]  @relation("LegalActRelationTo")
+  reviewLogs        LegalActReviewLog[]
+  timelineEvents    LegalActTimelineEvent[]
+
+  @@index([editorialStatus, updatedAt])
+}
+
+model LawSection {
+  id                 String               @id @default(cuid())
+  actId              String
+  act                LegalAct             @relation(fields: [actId], references: [id], onDelete: Cascade)
+  sectionKey         String
+  title              String
+  sectionText        String               @db.Text
+  plainEnglish       String               @db.Text
+  punishmentSummary  String?              @db.Text
+  practicalGuidance  String?              @db.Text
+  exampleScenario    String?              @db.Text
+  editorialStatus    String               @default("REVIEW")
+  reviewerNotes      String?              @db.Text
+  reviewedAt         DateTime?
+  reviewedById       String?
+  reviewedBy         User?                @relation("LawSectionReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  aliases            LawSectionAlias[]
+  issueTopics        LegalIssueTopic[]
+  outgoingCrosswalks LawSectionCrosswalk[] @relation("LawSectionCrosswalkFrom")
+  incomingCrosswalks LawSectionCrosswalk[] @relation("LawSectionCrosswalkTo")
+  reviewLogs         LawSectionReviewLog[]
+  historyEntries     LawSectionHistoryEntry[]
+
+  @@unique([actId, sectionKey])
+  @@index([editorialStatus, updatedAt])
+  @@index([actId, editorialStatus])
+}
+
+model LegalActVersion {
+  id                String    @id @default(cuid())
+  actId             String
+  act               LegalAct  @relation(fields: [actId], references: [id], onDelete: Cascade)
+  versionLabel      String
+  status            String    @default("IN_FORCE")
+  commencementDate  DateTime?
+  effectiveFrom     DateTime?
+  effectiveTo       DateTime?
+  updateSummary     String?   @db.Text
+  officialSourceUrl String?   @db.Text
+  officialPdfUrl    String?   @db.Text
+  isCurrent         Boolean   @default(false)
+  displayOrder      Int       @default(0)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@unique([actId, versionLabel])
+  @@index([actId, isCurrent, displayOrder])
+}
+
+model LegalActTimelineEvent {
+  id           String    @id @default(cuid())
+  actId        String
+  act          LegalAct  @relation(fields: [actId], references: [id], onDelete: Cascade)
+  title        String
+  summary      String?   @db.Text
+  eventType    String
+  eventDate    DateTime?
+  sourceLabel  String?
+  sourceUrl    String?   @db.Text
+  sourcePdfUrl String?   @db.Text
+  displayOrder Int       @default(0)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([actId, displayOrder, eventDate])
+  @@index([eventType, eventDate])
+}
+
+model LegalActRelation {
+  id            String   @id @default(cuid())
+  fromActId     String
+  toActId       String
+  relationType  String
+  summary       String?  @db.Text
+  effectiveFrom DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  fromAct       LegalAct @relation("LegalActRelationFrom", fields: [fromActId], references: [id], onDelete: Cascade)
+  toAct         LegalAct @relation("LegalActRelationTo", fields: [toActId], references: [id], onDelete: Cascade)
+
+  @@unique([fromActId, toActId, relationType])
+  @@index([fromActId, relationType])
+  @@index([toActId, relationType])
+}
+
+model LawSectionHistoryEntry {
+  id           String     @id @default(cuid())
+  lawSectionId String
+  lawSection   LawSection @relation(fields: [lawSectionId], references: [id], onDelete: Cascade)
+  title        String
+  summary      String?    @db.Text
+  entryType    String
+  eventDate    DateTime?
+  sourceLabel  String?
+  sourceUrl    String?    @db.Text
+  sourcePdfUrl String?    @db.Text
+  displayOrder Int        @default(0)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@index([lawSectionId, displayOrder, eventDate])
+  @@index([entryType, eventDate])
+}
+
+model LawSectionAlias {
+  id              String     @id @default(cuid())
+  lawSectionId    String
+  lawSection      LawSection @relation(fields: [lawSectionId], references: [id], onDelete: Cascade)
+  alias           String
+  normalizedAlias String
+  locale          String?
+  aliasType       String     @default("SEARCH")
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  @@unique([lawSectionId, normalizedAlias, locale])
+  @@index([normalizedAlias])
+  @@index([lawSectionId, aliasType])
+}
+
+model LawSectionCrosswalk {
+  id            String     @id @default(cuid())
+  fromSectionId String
+  toSectionId   String
+  relationType  String     @default("SUCCESSOR")
+  summary       String?    @db.Text
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  fromSection   LawSection @relation("LawSectionCrosswalkFrom", fields: [fromSectionId], references: [id], onDelete: Cascade)
+  toSection     LawSection @relation("LawSectionCrosswalkTo", fields: [toSectionId], references: [id], onDelete: Cascade)
+
+  @@unique([fromSectionId, toSectionId, relationType])
+  @@index([fromSectionId, relationType])
+  @@index([toSectionId, relationType])
+}
+
+model LegalIssueTopic {
+  id            String      @id @default(cuid())
+  slug          String      @unique
+  title         String
+  description   String?     @db.Text
+  searchKeywords String?    @db.Text
+  acts          LegalAct[]
+  sections      LawSection[]
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+model SearchDocument {
+  id           String   @id @default(cuid())
+  documentType String
+  entitySlug   String
+  locale       String   @default("en")
+  href         String
+  title        String
+  description  String?  @db.Text
+  searchText   String   @db.Text
+  rankBoost    Float    @default(1.0)
+  isPublished  Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([documentType, entitySlug, locale])
+  @@index([documentType, locale, isPublished])
 }
 
 model DocumentTemplate {
@@ -230,9 +540,121 @@ model DocumentTemplate {
   category     String
   downloads    Int                           @default(0)
   content      String
+  editorialStatus String                     @default("REVIEW")
+  reviewerNotes  String?                     @db.Text
+  reviewedAt     DateTime?
+  reviewedById   String?
+  reviewedBy     User?                       @relation("TemplateReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
   createdAt    DateTime                      @default(now())
   updatedAt    DateTime                      @updatedAt
   translations DocumentTemplateTranslation[]
+  reviewLogs   TemplateReviewLog[]
+}
+
+model LawyerVerificationCase {
+  id                         String        @id @default(cuid())
+  lawyerProfileId            String
+  lawyerProfile              LawyerProfile @relation(fields: [lawyerProfileId], references: [id], onDelete: Cascade)
+  submittedBarCouncilId      String?
+  identityDocumentUrl        String?       @db.Text
+  enrollmentCertificateUrl   String?       @db.Text
+  practiceCertificateUrl     String?       @db.Text
+  lawyerNotes                String?       @db.Text
+  adminNotes                 String?       @db.Text
+  status                     String        @default("UNDER_REVIEW")
+  submittedAt                DateTime      @default(now())
+  reviewedAt                 DateTime?
+  reviewedById               String?
+  reviewedBy                 User?         @relation("LawyerVerificationReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+  createdAt                  DateTime      @default(now())
+  updatedAt                  DateTime      @updatedAt
+
+  @@index([lawyerProfileId, submittedAt])
+  @@index([status, submittedAt])
+}
+
+model TemplateReviewLog {
+  id           String           @id @default(cuid())
+  templateId    String
+  template      DocumentTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  status        String
+  notes         String?          @db.Text
+  reviewedById  String?
+  reviewedBy    User?            @relation("TemplateReviewLogReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+  createdAt     DateTime         @default(now())
+
+  @@index([templateId, createdAt])
+  @@index([status, createdAt])
+}
+
+model FAQReviewLog {
+  id           String   @id @default(cuid())
+  faqId        String
+  faq          FAQ      @relation(fields: [faqId], references: [id], onDelete: Cascade)
+  status       String
+  notes        String?  @db.Text
+  reviewedById String?
+  reviewedBy   User?    @relation("FAQReviewLogReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+  createdAt    DateTime @default(now())
+
+  @@index([faqId, createdAt])
+  @@index([status, createdAt])
+}
+
+model GuideReviewLog {
+  id           String     @id @default(cuid())
+  guideId      String
+  guide        GuideEntry @relation(fields: [guideId], references: [id], onDelete: Cascade)
+  status       String
+  notes        String?    @db.Text
+  reviewedById String?
+  reviewedBy   User?      @relation("GuideReviewLogReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+  createdAt    DateTime   @default(now())
+
+  @@index([guideId, createdAt])
+  @@index([status, createdAt])
+}
+
+model RightReviewLog {
+  id           String     @id @default(cuid())
+  rightId      String
+  right        RightEntry @relation(fields: [rightId], references: [id], onDelete: Cascade)
+  status       String
+  notes        String?    @db.Text
+  reviewedById String?
+  reviewedBy   User?      @relation("RightReviewLogReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+  createdAt    DateTime   @default(now())
+
+  @@index([rightId, createdAt])
+  @@index([status, createdAt])
+}
+
+model LegalActReviewLog {
+  id           String    @id @default(cuid())
+  legalActId   String
+  legalAct     LegalAct  @relation(fields: [legalActId], references: [id], onDelete: Cascade)
+  status       String
+  notes        String?   @db.Text
+  reviewedById String?
+  reviewedBy   User?     @relation("LegalActReviewLogReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+  createdAt    DateTime  @default(now())
+
+  @@index([legalActId, createdAt])
+  @@index([status, createdAt])
+}
+
+model LawSectionReviewLog {
+  id           String     @id @default(cuid())
+  lawSectionId String
+  lawSection   LawSection @relation(fields: [lawSectionId], references: [id], onDelete: Cascade)
+  status       String
+  notes        String?    @db.Text
+  reviewedById String?
+  reviewedBy   User?      @relation("LawSectionReviewLogReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+  createdAt    DateTime   @default(now())
+
+  @@index([lawSectionId, createdAt])
+  @@index([status, createdAt])
 }
 
 model LanguageTranslation {

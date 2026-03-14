@@ -4,11 +4,14 @@ import { ArrowLeft, ArrowRight, BookOpen, Phone } from 'lucide-react';
 import { notFound } from 'next/navigation';
 
 import { getLocalizedText } from '@/lib/content/localized';
+import { getRightDiscoveryBundle } from '@/lib/legal-discovery';
 import { rightsCategories, rightsCopy } from '@/lib/content/rights';
+import { normalizeEditorialStatus } from '@/lib/editorial-review';
 import { createLocalizedMetadata } from '@/lib/i18n/metadata';
 import { getMessages } from '@/lib/i18n/messages';
 import { withLocalePrefix } from '@/lib/i18n/navigation';
 import { getRequestLocale } from '@/lib/i18n/request';
+import prisma from '@/lib/prisma';
 
 const emergencyNumbers = ['100', '1091', '15100', '1930', '14567'];
 
@@ -40,13 +43,34 @@ export default async function RightsDetailPage({ params }: { params: Promise<{ s
   const messages = getMessages(locale);
   const resolvedParams = await params;
   const category = rightsCategories.find((entry) => entry.slug === resolvedParams.slug);
+  const rightEntry = await prisma.rightEntry.findUnique({
+    where: { slug: resolvedParams.slug },
+    select: {
+      editorialStatus: true,
+      reviewerNotes: true,
+      reviewedAt: true,
+    },
+  });
 
-  if (!category) {
+  if (!category || normalizeEditorialStatus(rightEntry?.editorialStatus, 'APPROVED') === 'ARCHIVED') {
     notFound();
   }
 
   const Icon = category.icon;
   const categoryTitle = getLocalizedText(category.title, locale);
+  const editorialStatus = normalizeEditorialStatus(rightEntry?.editorialStatus, 'APPROVED');
+  const isReviewed = editorialStatus === 'APPROVED';
+  const discovery = await getRightDiscoveryBundle(resolvedParams.slug, locale);
+  const statusLabel = isReviewed
+    ? 'Reviewed rights summary'
+    : editorialStatus === 'REVIEW'
+      ? 'Rights summary under review'
+      : 'Rights summary in progress';
+  const reviewNote =
+    rightEntry?.reviewerNotes ??
+    (isReviewed
+      ? 'This rights summary has been approved in LexIndia’s editorial workflow for public awareness use.'
+      : 'This rights summary is still in editorial review. Use it as an orientation aid and speak with a lawyer for case-specific advice.');
 
   return (
     <div className="min-h-screen bg-muted pb-16">
@@ -73,6 +97,22 @@ export default async function RightsDetailPage({ params }: { params: Promise<{ s
           <p className="max-w-3xl text-lg text-primary-foreground/80">
             {getLocalizedText(rightsCopy.detailsBody, locale)}
           </p>
+          <div className="mt-4 flex flex-wrap gap-3 text-xs text-primary-foreground/80">
+            <span className={`rounded-full border px-3 py-1 font-semibold ${isReviewed ? 'border-success/30 bg-success/10 text-success' : 'border-warning/30 bg-warning/10 text-warning'}`}>
+              {statusLabel}
+            </span>
+            {rightEntry?.reviewedAt ? (
+              <span>
+                Reviewed on: {new Date(rightEntry.reviewedAt).toLocaleDateString('en-IN')}
+              </span>
+            ) : null}
+          </div>
+        </div>
+      </section>
+
+      <section className={`border-b ${isReviewed ? 'border-success/20 bg-success/5' : 'border-warning/20 bg-warning/5'}`}>
+        <div className="mx-auto max-w-4xl px-4 py-3 text-xs text-foreground sm:px-6 lg:px-8">
+          <strong>Editorial note:</strong> {reviewNote}
         </div>
       </section>
 
@@ -106,6 +146,52 @@ export default async function RightsDetailPage({ params }: { params: Promise<{ s
               <p className="text-sm text-muted-foreground">{messages.lawyersPage.subtitle}</p>
             </Link>
           </div>
+
+          {discovery.lawLinks.length > 0 || discovery.guideLinks.length > 0 || discovery.knowledgeLinks.length > 0 ? (
+            <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
+              {discovery.lawLinks.length > 0 ? (
+                <div className="rounded-xl border border-border bg-surface p-4">
+                  <h3 className="mb-3 text-sm font-semibold text-foreground">Related law sections</h3>
+                  <div className="space-y-3">
+                    {discovery.lawLinks.map((link) => (
+                      <Link key={link.href} href={link.href} className="block">
+                        <p className="text-sm font-medium text-primary hover:underline">{link.title}</p>
+                        <p className="mt-1 text-xs text-muted-foreground">{link.description}</p>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
+              {discovery.guideLinks.length > 0 ? (
+                <div className="rounded-xl border border-border bg-surface p-4">
+                  <h3 className="mb-3 text-sm font-semibold text-foreground">Related guides</h3>
+                  <div className="space-y-3">
+                    {discovery.guideLinks.map((link) => (
+                      <Link key={link.href} href={link.href} className="block">
+                        <p className="text-sm font-medium text-primary hover:underline">{link.title}</p>
+                        <p className="mt-1 text-xs text-muted-foreground">{link.description}</p>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
+              {discovery.knowledgeLinks.length > 0 ? (
+                <div className="rounded-xl border border-border bg-surface p-4">
+                  <h3 className="mb-3 text-sm font-semibold text-foreground">Search related FAQs</h3>
+                  <div className="space-y-3">
+                    {discovery.knowledgeLinks.map((link) => (
+                      <Link key={link.href} href={link.href} className="block">
+                        <p className="text-sm font-medium text-primary hover:underline">{link.title}</p>
+                        <p className="mt-1 text-xs text-muted-foreground">{link.description}</p>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
 
           <div className="mt-6 rounded-xl border border-danger/20 bg-danger/5 p-4">
             <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">

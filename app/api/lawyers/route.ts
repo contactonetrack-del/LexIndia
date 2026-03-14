@@ -4,6 +4,7 @@ import { getApiLocale, getApiLocalizedText } from '@/lib/i18n/api';
 import { localizeNamedEntity } from '@/lib/i18n/db';
 import prisma from '@/lib/prisma';
 import { rateLimit, getClientIp } from '@/lib/rateLimit';
+import { getLawyerVerificationStatus } from '@/lib/verification';
 
 const LAWYERS_LIMIT = { limit: 30, windowSecs: 60 };
 
@@ -30,96 +31,98 @@ export async function GET(req: NextRequest) {
     const language = searchParams.get('language') || '';
     const verified = searchParams.get('verified') === 'true' ? true : undefined;
 
-    const lawyers = await (prisma.lawyerProfile as any).findMany({
-      where: {
-        AND: [
-          city ? { city: { contains: city, mode: 'insensitive' } } : {},
-          minRating > 0 ? { rating: { gte: minRating } } : {},
-          minExp > 0 ? { experienceYears: { gte: minExp } } : {},
-          maxFee < 999999 ? { consultationFee: { lte: maxFee } } : {},
-          verified !== undefined ? { isVerified: verified } : {},
-          specialization
-            ? {
-                specializations: {
-                  some: {
-                    OR: [
-                      { name: { contains: specialization, mode: 'insensitive' } },
-                      {
-                        translations: {
-                          some: {
-                            locale,
-                            name: { contains: specialization, mode: 'insensitive' },
-                          },
+    const where: any = {
+      AND: [
+        city ? { city: { contains: city, mode: 'insensitive' } } : {},
+        minRating > 0 ? { rating: { gte: minRating } } : {},
+        minExp > 0 ? { experienceYears: { gte: minExp } } : {},
+        maxFee < 999999 ? { consultationFee: { lte: maxFee } } : {},
+        verified !== undefined ? { isVerified: verified } : {},
+        specialization
+          ? {
+              specializations: {
+                some: {
+                  OR: [
+                    { name: { contains: specialization, mode: 'insensitive' } },
+                    {
+                      translations: {
+                        some: {
+                          locale,
+                          name: { contains: specialization, mode: 'insensitive' },
                         },
                       },
-                    ],
-                  },
+                    },
+                  ],
                 },
-              }
-            : {},
-          language
-            ? {
-                languages: {
-                  some: {
-                    OR: [
-                      { name: { contains: language, mode: 'insensitive' } },
-                      {
-                        translations: {
-                          some: {
-                            locale,
-                            name: { contains: language, mode: 'insensitive' },
-                          },
+              },
+            }
+          : {},
+        language
+          ? {
+              languages: {
+                some: {
+                  OR: [
+                    { name: { contains: language, mode: 'insensitive' } },
+                    {
+                      translations: {
+                        some: {
+                          locale,
+                          name: { contains: language, mode: 'insensitive' },
                         },
                       },
-                    ],
+                    },
+                  ],
+                },
+              },
+            }
+          : {},
+        search
+          ? {
+              OR: [
+                { user: { name: { contains: search, mode: 'insensitive' } } },
+                { city: { contains: search, mode: 'insensitive' } },
+                {
+                  specializations: {
+                    some: {
+                      OR: [
+                        { name: { contains: search, mode: 'insensitive' } },
+                        {
+                          translations: {
+                            some: {
+                              locale,
+                              name: { contains: search, mode: 'insensitive' },
+                            },
+                          },
+                        },
+                      ],
+                    },
                   },
                 },
-              }
-            : {},
-          search
-            ? {
-                OR: [
-                  { user: { name: { contains: search, mode: 'insensitive' } } },
-                  { city: { contains: search, mode: 'insensitive' } },
-                  {
-                    specializations: {
-                      some: {
-                        OR: [
-                          { name: { contains: search, mode: 'insensitive' } },
-                          {
-                            translations: {
-                              some: {
-                                locale,
-                                name: { contains: search, mode: 'insensitive' },
-                              },
+                {
+                  languages: {
+                    some: {
+                      OR: [
+                        { name: { contains: search, mode: 'insensitive' } },
+                        {
+                          translations: {
+                            some: {
+                              locale,
+                              name: { contains: search, mode: 'insensitive' },
                             },
                           },
-                        ],
-                      },
+                        },
+                      ],
                     },
                   },
-                  {
-                    languages: {
-                      some: {
-                        OR: [
-                          { name: { contains: search, mode: 'insensitive' } },
-                          {
-                            translations: {
-                              some: {
-                                locale,
-                                name: { contains: search, mode: 'insensitive' },
-                              },
-                            },
-                          },
-                        ],
-                      },
-                    },
-                  },
-                ],
-              }
-            : {},
-        ],
-      },
+                },
+              ],
+            }
+          : {},
+      ],
+    };
+
+    const lawyers: any[] = await prisma.lawyerProfile.findMany({
+      where,
       include: {
         user: { select: { name: true, image: true, email: true } },
         languages: {
@@ -133,6 +136,14 @@ export async function GET(req: NextRequest) {
           },
         },
         modes: true,
+        verificationCases: {
+          select: {
+            status: true,
+            submittedAt: true,
+          },
+          orderBy: { submittedAt: 'desc' },
+          take: 1,
+        },
       },
       orderBy: { rating: 'desc' },
     });
@@ -148,6 +159,7 @@ export async function GET(req: NextRequest) {
         ...lawyer,
         languages: lawyer.languages.map((entry: any) => localizeNamedEntity(entry, locale)),
         specializations: lawyer.specializations.map((entry: any) => localizeNamedEntity(entry, locale)),
+        verificationStatus: getLawyerVerificationStatus(lawyer),
       }))
       .sort((a: any, b: any) => {
         const tierA = (a as any).subscriptionTier || 'BASIC';

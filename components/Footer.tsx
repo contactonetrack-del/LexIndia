@@ -4,12 +4,14 @@ import React from 'react';
 import { Scale } from 'lucide-react';
 
 import LocaleLink from '@/components/LocaleLink';
+import { localizeTreeFromMemory } from '@/lib/content/localized';
 import { getPageFallbackContent } from '@/lib/content/page-fallbacks';
 import { useLanguage } from '@/lib/LanguageContext';
 
 export default function Footer() {
   const { fontClass, lang, t } = useLanguage();
   const guidesLabel = getPageFallbackContent('guides', lang).title;
+  const lawsLabel = localizeTreeFromMemory({ laws: 'Indian Laws' } as const, lang).laws;
   const verificationLabel = getPageFallbackContent('verifyLawyers', lang).title;
   const disclaimerPageLabel = getPageFallbackContent('disclaimer', lang).title;
 
@@ -31,6 +33,7 @@ export default function Footer() {
               <li><LocaleLink href="/lawyers" className="transition-colors hover:text-foreground">{t.footer.findLawyer}</LocaleLink></li>
               <li><LocaleLink href="/knowledge" className="transition-colors hover:text-foreground">{t.footer.knowledge}</LocaleLink></li>
               <li><LocaleLink href="/guides" className="transition-colors hover:text-foreground">{guidesLabel}</LocaleLink></li>
+              <li><LocaleLink href="/laws" className="transition-colors hover:text-foreground">{lawsLabel}</LocaleLink></li>
               <li><LocaleLink href="/templates" className="transition-colors hover:text-foreground">{t.footer.templates}</LocaleLink></li>
               <li><LocaleLink href="/rights" className="transition-colors hover:text-foreground">{t.footer.rights}</LocaleLink></li>
             </ul>

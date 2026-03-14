@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getApiLocale } from '@/lib/i18n/api';
 import { localizeFields, localizeNamedEntity } from '@/lib/i18n/db';
 import prisma from '@/lib/prisma';
+import { getLawyerVerificationStatus } from '@/lib/verification';
 
 export async function GET(
   req: NextRequest,
@@ -16,7 +17,7 @@ export async function GET(
   }
 
   try {
-    const lawyer = await (prisma.lawyerProfile as any).findUnique({
+    const lawyer = await prisma.lawyerProfile.findUnique({
       where: { id },
       include: {
         user: { select: { name: true, image: true, email: true, createdAt: true } },
@@ -32,6 +33,14 @@ export async function GET(
         },
         translations: true,
         modes: true,
+        verificationCases: {
+          select: {
+            status: true,
+            submittedAt: true,
+          },
+          orderBy: { submittedAt: 'desc' },
+          take: 1,
+        },
         appointments: {
           where: { status: 'COMPLETED' },
           select: { id: true },
@@ -48,6 +57,7 @@ export async function GET(
         ...localizeFields(lawyer, lawyer.translations, locale, ['bio']),
         languages: lawyer.languages.map((entry: any) => localizeNamedEntity(entry, locale)),
         specializations: lawyer.specializations.map((entry: any) => localizeNamedEntity(entry, locale)),
+        verificationStatus: getLawyerVerificationStatus(lawyer),
       },
     });
   } catch (error) {

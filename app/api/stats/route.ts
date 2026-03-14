@@ -6,6 +6,7 @@ import prisma from '@/lib/prisma';
  * Returns live platform counts for use on the homepage.
  * Cached at the edge for 10 minutes to avoid DB hammering.
  */
+export const dynamic = 'force-dynamic';
 export const revalidate = 600; // 10-minute ISR cache
 
 export async function GET() {

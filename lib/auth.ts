@@ -5,6 +5,7 @@ import GoogleProvider from "next-auth/providers/google";
 import bcrypt from "bcryptjs";
 import prisma from "@/lib/prisma";
 import type { Adapter } from "next-auth/adapters";
+import { isAdminUser } from "@/lib/admin";
 
 export const authOptions: NextAuthOptions = {
     adapter: PrismaAdapter(prisma) as Adapter,
@@ -87,12 +88,17 @@ export const authOptions: NextAuthOptions = {
                 const dbUser = await prisma.user.findUnique({ where: { id: token.sub as string }, select: { role: true } });
                 token.role = dbUser?.role ?? "CITIZEN";
             }
+            token.isAdmin = isAdminUser({
+                role: token.role as string,
+                email: typeof token.email === "string" ? token.email : null,
+            });
             return token;
         },
         async session({ session, token }) {
             if (token) {
                 session.user.role = token.role as string;
                 session.user.id = token.id as string;
+                session.user.isAdmin = Boolean(token.isAdmin);
             }
             return session;
         },

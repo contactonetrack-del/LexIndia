@@ -8,6 +8,7 @@ import {
   ChevronRight,
   FileText,
   Home,
+  Landmark,
   Lock,
   MessageSquare,
   Scale,
@@ -22,6 +23,7 @@ import { PartnerLogos } from '@/components/ui/PartnerLogos';
 import { SearchForm } from '@/components/ui/SearchForm';
 import { TestimonialsCarousel } from '@/components/ui/Testimonials';
 import { useAuth } from '@/lib/AuthContext';
+import { localizeTreeFromMemory } from '@/lib/content/localized';
 import { getPageFallbackContent } from '@/lib/content/page-fallbacks';
 import { useLanguage } from '@/lib/LanguageContext';
 import { getTranslation } from '@/lib/translations';
@@ -85,6 +87,20 @@ export default function HomePage() {
   const verifyLawyersLabel = getPageFallbackContent('verifyLawyers', lang).title;
   const verificationProcessTitle = 'Our verification process';
   const verificationPolicyLabel = 'Read full verification policy';
+  const discoveryCopy = localizeTreeFromMemory(
+    {
+      title: 'Start with the right legal path',
+      subtitle:
+        'Use the right surface for the right problem: issue-led guidance, procedural guides, or reviewed law sections.',
+      rightsTitle: 'Know your rights',
+      rightsBody: 'Start with issue-led summaries if you are not sure which law or process applies.',
+      guidesTitle: 'Follow practical guides',
+      guidesBody: 'Move through FIR, bail, consumer, RTI, and family-law procedures step by step.',
+      lawsTitle: 'Browse Indian laws',
+      lawsBody: 'Read reviewed act summaries and plain-English section explainers.',
+    } as const,
+    lang
+  );
 
   const categoryCards = [
     { icon: Shield, title: t.categories.c1, href: '/lawyers?q=criminal' },
@@ -184,6 +200,55 @@ export default function HomePage() {
                 </p>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-background py-20">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="mb-12 text-center">
+            <h2 className={`mb-4 text-3xl font-bold text-foreground ${fontClass}`}>
+              {discoveryCopy.title}
+            </h2>
+            <p className={`mx-auto max-w-3xl text-lg text-muted-foreground ${fontClass}`}>
+              {discoveryCopy.subtitle}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+            <LocaleLink
+              href="/rights"
+              className="rounded-2xl border border-border bg-surface p-8 shadow-sm transition-shadow hover:shadow-md"
+            >
+              <Shield className="mb-5 h-7 w-7 text-primary" />
+              <h3 className={`mb-3 text-xl font-semibold text-foreground ${fontClass}`}>
+                {discoveryCopy.rightsTitle}
+              </h3>
+              <p className={`text-muted-foreground ${fontClass}`}>{discoveryCopy.rightsBody}</p>
+            </LocaleLink>
+
+            <LocaleLink
+              href="/guides"
+              className="rounded-2xl border border-border bg-surface p-8 shadow-sm transition-shadow hover:shadow-md"
+            >
+              <BookOpen className="mb-5 h-7 w-7 text-primary" />
+              <h3 className={`mb-3 text-xl font-semibold text-foreground ${fontClass}`}>
+                {discoveryCopy.guidesTitle}
+              </h3>
+              <p className={`text-muted-foreground ${fontClass}`}>{discoveryCopy.guidesBody}</p>
+            </LocaleLink>
+
+            <LocaleLink
+              href="/laws"
+              data-testid="homepage-laws-link"
+              className="rounded-2xl border border-border bg-surface p-8 shadow-sm transition-shadow hover:shadow-md"
+            >
+              <Landmark className="mb-5 h-7 w-7 text-primary" />
+              <h3 className={`mb-3 text-xl font-semibold text-foreground ${fontClass}`}>
+                {discoveryCopy.lawsTitle}
+              </h3>
+              <p className={`text-muted-foreground ${fontClass}`}>{discoveryCopy.lawsBody}</p>
+            </LocaleLink>
           </div>
         </div>
       </section>

@@ -2,11 +2,12 @@
 
 import React, { useEffect, useState } from 'react';
 import { Eye, EyeOff, Loader2, Lock, Mail, Scale, User, X } from 'lucide-react';
-import { signIn } from 'next-auth/react';
+import { getSession, signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 
 import { localizeTreeFromMemory } from '@/lib/content/localized';
 import { useAuth } from '@/lib/AuthContext';
+import { getDashboardPath } from '@/lib/dashboard';
 import { useLanguage } from '@/lib/LanguageContext';
 import { localizeHref } from '@/lib/i18n/navigation';
 
@@ -90,7 +91,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
 
     try {
       await signIn('google', {
-        callbackUrl: localizeHref(role === 'LAWYER' ? '/dashboard/lawyer' : '/dashboard/citizen', lang),
+        callbackUrl: localizeHref('/dashboard/citizen', lang),
       });
       onClose();
     } catch {
@@ -112,9 +113,13 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
       return;
     }
 
+    const session = await getSession();
+    const dashboardHref = localizeHref(
+      getDashboardPath(session?.user),
+      lang
+    );
     onClose();
-    router.refresh();
-    router.push(localizeHref(role === 'LAWYER' ? '/dashboard/lawyer' : '/dashboard/citizen', lang));
+    router.push(dashboardHref);
   };
 
   const handleRegister = async (event: React.FormEvent) => {
@@ -165,9 +170,9 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
 
       await signIn('credentials', { email, password, redirect: false });
       setIsLoading(false);
+      const dashboardHref = localizeHref(getDashboardPath({ role }), lang);
       onClose();
-      router.refresh();
-      router.push(localizeHref(role === 'LAWYER' ? '/dashboard/lawyer' : '/dashboard/citizen', lang));
+      router.push(dashboardHref);
     } catch {
       setError(t.common.error);
       setIsLoading(false);
@@ -178,6 +183,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
 
   return (
     <div
+      data-testid="auth-modal"
       className="fixed inset-0 z-[100] flex items-center justify-center bg-foreground/45 p-4 backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
@@ -204,6 +210,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
           {(['login', 'register'] as TabType[]).map((tabName) => (
             <button
               key={tabName}
+              data-testid={`auth-tab-${tabName}`}
               role="tab"
               aria-selected={tab === tabName}
               onClick={() => {
@@ -227,6 +234,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
               <button
                 key={currentRole}
                 type="button"
+                data-testid={`auth-role-${currentRole.toLowerCase()}`}
                 onClick={() => setRole(currentRole)}
                 aria-pressed={role === currentRole}
                 className={`flex flex-1 items-center justify-center gap-2 rounded-xl border-2 py-2.5 text-sm font-semibold transition-all ${
@@ -326,6 +334,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                 />
                 <input
                   id="auth-email"
+                  data-testid="auth-email-input"
                   type="email"
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
@@ -351,6 +360,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                 />
                 <input
                   id="auth-password"
+                  data-testid="auth-password-input"
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
@@ -399,6 +409,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
 
             <button
               type="submit"
+              data-testid="auth-submit-button"
               disabled={isLoading || (tab === 'register' && !consentChecked)}
               className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3 font-bold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
             >

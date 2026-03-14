@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 
 import { authOptions } from "@/lib/auth";
 import { getApiLocalizedText } from "@/lib/i18n/api";
+import { LAWYER_SUBSCRIPTION_PRICES, isPaidLawyerSubscriptionTier } from "@/lib/subscriptions";
 import Razorpay from "razorpay";
 
 export async function POST(req: NextRequest) {
@@ -18,19 +19,14 @@ export async function POST(req: NextRequest) {
 
     const { tier } = await req.json();
 
-    if (!['PRO', 'ELITE'].includes(tier)) {
+    if (typeof tier !== 'string' || !isPaidLawyerSubscriptionTier(tier)) {
       return NextResponse.json(
         { error: getApiLocalizedText(req, "Invalid tier specified") },
         { status: 400 }
       );
     }
 
-    const amountMap: Record<string, number> = {
-      PRO: 999,
-      ELITE: 2499,
-    };
-
-    const amount = amountMap[tier];
+    const amount = LAWYER_SUBSCRIPTION_PRICES[tier];
 
     const options = {
       amount: amount * 100, // Amount in paise

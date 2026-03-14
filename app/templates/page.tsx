@@ -14,6 +14,8 @@ import { getMemoryLocalizedText, localizeTemplateText } from '@/lib/content/loca
 import { getTemplatesContent } from '@/lib/content/templates';
 import { formatNumber } from '@/lib/i18n/format';
 import { useLanguage } from '@/lib/LanguageContext';
+import type { TemplateAvailabilityStatus } from '@/lib/template-availability';
+import type { TemplateEditorialStatus } from '@/lib/template-review';
 
 interface Template {
   id: string;
@@ -22,6 +24,13 @@ interface Template {
   category: string;
   downloads: number;
   content: string;
+  previewText?: string;
+  availabilityStatus: TemplateAvailabilityStatus;
+  editorialStatus: TemplateEditorialStatus;
+  isReadyForDownload: boolean;
+  hasPlaceholderText: boolean;
+  reviewerNotes?: string | null;
+  reviewedAt?: string | null;
 }
 
 export default function TemplatesPage() {
@@ -29,6 +38,20 @@ export default function TemplatesPage() {
   const content = getTemplatesContent(lang);
   const searchTemplatesLabel = t.templates.searchPlaceholder;
   const filterCategoryLabel = getMemoryLocalizedText('Filter by category', lang);
+  const templateUiCopy = {
+    previewOnly: getMemoryLocalizedText('Preview only', lang),
+    readyToDownload: getMemoryLocalizedText('Ready to download', lang),
+    editorialReviewPending: getMemoryLocalizedText('Editorial review pending', lang),
+    editorialApproved: getMemoryLocalizedText('Editorially approved', lang),
+    editorialDraft: getMemoryLocalizedText('Draft', lang),
+    editorialArchived: getMemoryLocalizedText('Archived', lang),
+    lawyerDraftCta: getMemoryLocalizedText('Request lawyer draft', lang),
+    textDownloadLabel: getMemoryLocalizedText('Download TXT', lang),
+    previewNotice: getMemoryLocalizedText(
+      'This entry is still a sample placeholder. Use a verified lawyer for a custom draft or reviewed version.',
+      lang
+    ),
+  };
 
   const [templates, setTemplates] = useState<Template[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -56,6 +79,13 @@ export default function TemplatesPage() {
       notation: downloads >= 1000 ? 'compact' : 'standard',
       maximumFractionDigits: 0,
     });
+  };
+
+  const getEditorialLabel = (status: TemplateEditorialStatus) => {
+    if (status === 'APPROVED') return templateUiCopy.editorialApproved;
+    if (status === 'DRAFT') return templateUiCopy.editorialDraft;
+    if (status === 'ARCHIVED') return templateUiCopy.editorialArchived;
+    return templateUiCopy.editorialReviewPending;
   };
 
   return (
@@ -139,9 +169,25 @@ export default function TemplatesPage() {
                   <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
                     <FileText className="h-6 w-6" />
                   </div>
-                  <span className={`rounded-md bg-surface px-2.5 py-1 text-xs font-medium text-muted-foreground ${fontClass}`}>
-                    {template.category}
-                  </span>
+                  <div className="flex flex-col items-end gap-2">
+                    <span className={`rounded-md bg-surface px-2.5 py-1 text-xs font-medium text-muted-foreground ${fontClass}`}>
+                      {template.category}
+                    </span>
+                    <span className={`rounded-md bg-surface px-2.5 py-1 text-[11px] font-medium text-muted-foreground ${fontClass}`}>
+                      {getEditorialLabel(template.editorialStatus)}
+                    </span>
+                    <span
+                      className={`rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide ${
+                        template.isReadyForDownload
+                          ? 'bg-success/10 text-success'
+                          : 'bg-warning/10 text-warning'
+                      } ${fontClass}`}
+                    >
+                      {template.isReadyForDownload
+                        ? templateUiCopy.readyToDownload
+                        : templateUiCopy.previewOnly}
+                    </span>
+                  </div>
                 </div>
 
                 <h3 className={`mb-2 text-xl font-bold text-foreground ${fontClass}`}>{template.title}</h3>
@@ -149,22 +195,53 @@ export default function TemplatesPage() {
                   {template.description}
                 </p>
 
+                {!template.isReadyForDownload ? (
+                  <div className="mb-6 rounded-xl border border-warning/30 bg-warning/10 p-3">
+                    <p className={`text-xs leading-relaxed text-warning ${fontClass}`}>
+                      <strong>{templateUiCopy.editorialReviewPending}:</strong>{' '}
+                      {templateUiCopy.previewNotice}
+                    </p>
+                    {template.reviewerNotes ? (
+                      <p className={`mt-2 text-xs leading-relaxed text-warning/90 ${fontClass}`}>
+                        {template.reviewerNotes}
+                      </p>
+                    ) : null}
+                  </div>
+                ) : null}
+
                 <div className="mt-auto flex items-center justify-between border-t border-border pt-4">
-                  <span className={`flex items-center gap-1 text-xs text-muted-foreground ${fontClass}`}>
-                    <Download className="h-3 w-3" />
-                    {formatDownloads(template.downloads)} {content.downloadsLabel}
-                  </span>
-                  <a
-                    href={`data:text/plain;charset=utf-8,${encodeURIComponent(template.content || `# ${template.title}\n\n${template.description}`)}`}
-                    download={`${template.id}-template.txt`}
-                    aria-label={localizeTemplateText('Download {title} as text file', lang, {
-                      title: template.title,
-                    })}
-                    className={`flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-medium text-primary transition-colors hover:bg-primary/10 ${fontClass}`}
-                  >
-                    <Download className="h-4 w-4" />
-                    TXT
-                  </a>
+                  {template.isReadyForDownload ? (
+                    <>
+                      <span className={`flex items-center gap-1 text-xs text-muted-foreground ${fontClass}`}>
+                        <Download className="h-3 w-3" />
+                        {formatDownloads(template.downloads)} {content.downloadsLabel}
+                      </span>
+                      <a
+                        href={`data:text/plain;charset=utf-8,${encodeURIComponent(template.content || `# ${template.title}\n\n${template.description}`)}`}
+                        download={`${template.id}-template.txt`}
+                        aria-label={localizeTemplateText('Download {title} as text file', lang, {
+                          title: template.title,
+                        })}
+                        className={`flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-medium text-primary transition-colors hover:bg-primary/10 ${fontClass}`}
+                      >
+                        <Download className="h-4 w-4" />
+                        {templateUiCopy.textDownloadLabel}
+                      </a>
+                    </>
+                  ) : (
+                    <>
+                      <span className={`text-xs text-muted-foreground ${fontClass}`}>
+                        {templateUiCopy.editorialReviewPending}
+                      </span>
+                      <LocaleLink
+                        href="/lawyers"
+                        className={`flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-medium text-primary transition-colors hover:bg-primary/10 ${fontClass}`}
+                      >
+                        <ArrowRight className="h-4 w-4" />
+                        {templateUiCopy.lawyerDraftCta}
+                      </LocaleLink>
+                    </>
+                  )}
                 </div>
               </SurfaceCard>
             ))}

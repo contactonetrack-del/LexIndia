@@ -6,10 +6,13 @@ import {
 } from 'lucide-react';
 
 import { getMemoryLocalizedText, localizeTreeFromMemory } from '@/lib/content/localized';
+import { getGuideDiscoveryBundle } from '@/lib/legal-discovery';
+import { normalizeEditorialStatus } from '@/lib/editorial-review';
 import type { Locale } from '@/lib/i18n/config';
 import { createLocalizedMetadata } from '@/lib/i18n/metadata';
 import { withLocalePrefix } from '@/lib/i18n/navigation';
 import { getRequestLocale } from '@/lib/i18n/request';
+import prisma from '@/lib/prisma';
 
 // ============================================================
 // Guide Content Repository
@@ -420,12 +423,23 @@ const GUIDE_PAGE_COPY = {
   comingSoonTitle: 'Guide Coming Soon',
   comingSoonBody:
     'Our legal team is working on this guide. In the meantime, use our AI assistant or book a verified lawyer.',
+  reviewPendingBody:
+    'This guide topic is listed in the library, but the full public version is still under editorial review.',
   browseAllGuides: 'Browse All Guides',
   findVerifiedLawyer: 'Find a Verified Lawyer',
   allGuides: 'All Guides',
   minRead: 'min read',
   updatedLabel: 'Updated',
   reviewedByLawyers: 'Reviewed by lawyers',
+  reviewedGuide: 'Reviewed guide',
+  guideUnderReview: 'Guide under review',
+  guideInProgress: 'Topic in progress',
+  reviewedOn: 'Reviewed on',
+  editorialNoteTitle: 'Editorial note',
+  reviewedNoteFallback:
+    'This guide has been approved in LexIndia’s legal editorial workflow for public awareness use.',
+  reviewPendingFallback:
+    'This guide is visible for transparency, but the editorial review is still in progress.',
   legalDisclaimerTitle: 'General Information Only',
   legalDisclaimerBody:
     'This guide explains general Indian law principles and does not constitute legal advice. For your specific situation, consult a',
@@ -443,18 +457,29 @@ const GUIDE_PAGE_COPY = {
   helpfulAuthorities: 'Helpful Authorities',
   visitWebsite: 'Visit website',
   relatedGuides: 'Related Guides',
+  relatedLaws: 'Related law sections',
+  relatedRights: 'Related rights pages',
+  relatedFaqs: 'Search related FAQs',
   browseAllGuidesArrow: 'Browse all guides ->',
 } as const;
 
 // Fallback for guides not yet written
-function ComingSoonGuide({ title, locale }: { title: string; locale: Locale }) {
+function ComingSoonGuide({
+  title,
+  locale,
+  body,
+}: {
+  title: string;
+  locale: Locale;
+  body?: string;
+}) {
   const copy = localizeTreeFromMemory(GUIDE_PAGE_COPY, locale);
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-muted px-4 py-16 text-center">
       <BookOpen className="mb-4 h-12 w-12 text-primary" />
       <h1 className="mb-2 text-2xl font-bold text-foreground">{title || copy.comingSoonTitle}</h1>
-      <p className="mb-6 max-w-md text-muted-foreground">{copy.comingSoonBody}</p>
+      <p className="mb-6 max-w-md text-muted-foreground">{body || copy.comingSoonBody}</p>
       <div className="flex flex-col justify-center gap-4 sm:flex-row">
         <Link
           href={withLocalePrefix('/guides', locale)}
@@ -507,16 +532,46 @@ export default async function GuidePage({ params }: Props) {
   const locale = await getRequestLocale();
   const { slug } = await params;
   const copy = localizeTreeFromMemory(GUIDE_PAGE_COPY, locale);
+  const guideEntry = await prisma.guideEntry.findUnique({
+    where: { slug },
+    select: {
+      editorialStatus: true,
+      reviewerNotes: true,
+      reviewedAt: true,
+      hasPublishedContent: true,
+    },
+  });
   const guide = GUIDES[slug]
     ? localizeTreeFromMemory(GUIDES[slug], locale, {
         skipKeys: ['slug', 'categorySlug', 'url', 'contact'],
       })
     : null;
+  const editorialStatus = normalizeEditorialStatus(
+    guideEntry?.editorialStatus,
+    guide ? 'APPROVED' : 'DRAFT'
+  );
+  const discovery = await getGuideDiscoveryBundle(slug, locale);
+  const isApprovedGuide =
+    editorialStatus === 'APPROVED' && (guideEntry?.hasPublishedContent ?? Boolean(guide));
+  const reviewStatusCopy = isApprovedGuide
+    ? copy.reviewedGuide
+    : editorialStatus === 'REVIEW'
+      ? copy.guideUnderReview
+      : copy.guideInProgress;
+  const reviewNote =
+    guideEntry?.reviewerNotes ??
+    (isApprovedGuide ? copy.reviewedNoteFallback : copy.reviewPendingFallback);
 
   // For unknown slugs that look valid, show "coming soon" rather than 404
   // (many guide stubs are listed on /guides but not written yet)
   if (!guide) {
-    return <ComingSoonGuide title="" locale={locale} />;
+    return (
+      <ComingSoonGuide
+        title=""
+        locale={locale}
+        body={guideEntry ? copy.reviewPendingBody : copy.comingSoonBody}
+      />
+    );
   }
 
   return (
@@ -563,9 +618,15 @@ export default async function GuidePage({ params }: Props) {
             <span>
               {copy.updatedLabel}: {guide.lastUpdated}
             </span>
-            <span className="flex items-center gap-1 text-success">
-              <CheckCircle className="h-3.5 w-3.5" /> {copy.reviewedByLawyers}
+            <span className={`flex items-center gap-1 ${isApprovedGuide ? 'text-success' : 'text-warning'}`}>
+              {isApprovedGuide ? <CheckCircle className="h-3.5 w-3.5" /> : <AlertTriangle className="h-3.5 w-3.5" />}
+              {reviewStatusCopy}
             </span>
+            {guideEntry?.reviewedAt ? (
+              <span>
+                {copy.reviewedOn}: {new Date(guideEntry.reviewedAt).toLocaleDateString('en-IN')}
+              </span>
+            ) : null}
           </div>
         </div>
       </div>
@@ -581,6 +642,21 @@ export default async function GuidePage({ params }: Props) {
                 {copy.verifiedLawyer}
               </Link>
               .
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className={`border-b ${isApprovedGuide ? 'border-success/30 bg-success/10' : 'border-warning/30 bg-warning/10'}`}>
+        <div className="mx-auto max-w-4xl px-4 py-3 sm:px-6 lg:px-8">
+          <div className="flex items-start gap-2">
+            {isApprovedGuide ? (
+              <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-success" />
+            ) : (
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
+            )}
+            <p className="text-xs text-foreground">
+              <strong>{copy.editorialNoteTitle}:</strong> {reviewNote}
             </p>
           </div>
         </div>
@@ -759,6 +835,64 @@ export default async function GuidePage({ params }: Props) {
                 </Link>
               </div>
             </div>
+
+            {(discovery.lawLinks.length > 0 || discovery.rightLinks.length > 0 || discovery.knowledgeLinks.length > 0) && (
+              <div className="rounded-2xl border border-border bg-background p-5 shadow-sm">
+                {discovery.lawLinks.length > 0 && (
+                  <div className="mb-4">
+                    <h3 className="mb-2 text-sm font-bold text-foreground">{copy.relatedLaws}</h3>
+                    <div className="space-y-2">
+                      {discovery.lawLinks.map((link) => (
+                        <Link
+                          key={link.href}
+                          href={link.href}
+                          className="block rounded-lg border border-border bg-surface p-3 transition-colors hover:border-primary/30"
+                        >
+                          <p className="text-xs font-semibold text-foreground">{link.title}</p>
+                          <p className="mt-1 text-xs text-muted-foreground">{link.description}</p>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {discovery.rightLinks.length > 0 && (
+                  <div className="mb-4">
+                    <h3 className="mb-2 text-sm font-bold text-foreground">{copy.relatedRights}</h3>
+                    <div className="space-y-2">
+                      {discovery.rightLinks.map((link) => (
+                        <Link
+                          key={link.href}
+                          href={link.href}
+                          className="block rounded-lg border border-border bg-surface p-3 transition-colors hover:border-primary/30"
+                        >
+                          <p className="text-xs font-semibold text-foreground">{link.title}</p>
+                          <p className="mt-1 text-xs text-muted-foreground">{link.description}</p>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {discovery.knowledgeLinks.length > 0 && (
+                  <div>
+                    <h3 className="mb-2 text-sm font-bold text-foreground">{copy.relatedFaqs}</h3>
+                    <div className="space-y-2">
+                      {discovery.knowledgeLinks.map((link) => (
+                        <Link
+                          key={link.href}
+                          href={link.href}
+                          className="block rounded-lg border border-border bg-surface p-3 transition-colors hover:border-primary/30"
+                        >
+                          <p className="text-xs font-semibold text-foreground">{link.title}</p>
+                          <p className="mt-1 text-xs text-muted-foreground">{link.description}</p>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>

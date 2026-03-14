@@ -1,12 +1,10 @@
 import { Resend } from "resend";
+import { SITE_URL } from "@/lib/site";
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
-// Determine absolute base URL for links (localhost or production domain)
-const domain = process.env.NEXTAUTH_URL || "http://localhost:3000";
-
 export const sendPasswordResetEmail = async (email: string, token: string) => {
-  const resetLink = `${domain}/reset-password?token=${token}`;
+  const resetLink = `${SITE_URL}/reset-password?token=${token}`;
 
   if (!resend) {
     console.log(`\n\n[MOCK EMAIL] Password Reset link for ${email}: ${resetLink}\n\n`);
@@ -22,7 +20,7 @@ export const sendPasswordResetEmail = async (email: string, token: string) => {
 };
 
 export const sendVerificationEmail = async (email: string, token: string) => {
-  const confirmLink = `${domain}/verify-email?token=${token}`;
+  const confirmLink = `${SITE_URL}/verify-email?token=${token}`;
 
   if (!resend) {
     console.log(`\n\n[MOCK EMAIL] Email Verification link for ${email}: ${confirmLink}\n\n`);

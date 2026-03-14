@@ -2,6 +2,9 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { spawn } = require('node:child_process');
 
+const host = process.env.HOSTNAME ?? '127.0.0.1';
+const port = process.env.PORT ?? '3000';
+
 function syncDirectory(source, target) {
   if (!fs.existsSync(source)) {
     return;
@@ -23,7 +26,7 @@ if (fs.existsSync(standaloneServerPath)) {
   require(standaloneServerPath);
 } else {
   const nextBin = path.join(process.cwd(), 'node_modules', 'next', 'dist', 'bin', 'next');
-  const child = spawn(process.execPath, [nextBin, 'start', '-H', '127.0.0.1', '-p', '3000'], {
+  const child = spawn(process.execPath, [nextBin, 'start', '-H', host, '-p', port], {
     cwd: process.cwd(),
     env: process.env,
     stdio: 'inherit',

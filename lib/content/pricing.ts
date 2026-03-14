@@ -1,6 +1,7 @@
 import { defineLocalizedText, getLocalizedText, type LocalizedText } from '@/lib/content/localized';
 import type { Locale } from '@/lib/i18n/config';
 import { formatCurrency } from '@/lib/i18n/format';
+import { LAWYER_SUBSCRIPTION_PRICES } from '@/lib/subscriptions';
 
 type PricingFeatureId =
   | 'directory'
@@ -480,7 +481,7 @@ const PLANS: PricingPlanDefinition[] = [
       bho: 'जादा क्लाइंट अनुरोध वाला प्रैक्टिस खातिर.',
       bh: 'बेसी क्लाइंट अनुरोध वाला प्रैक्टिस लेल।',
     }),
-    price: 1499,
+    price: LAWYER_SUBSCRIPTION_PRICES.PRO,
     period: 'month',
     cta: defineLocalizedText('Start pro trial', {
       hi: 'प्रो ट्रायल शुरू करें',
@@ -533,7 +534,7 @@ const PLANS: PricingPlanDefinition[] = [
       bho: 'प्रीमियम पहुंच आ सहारा चाहीं वाला फर्म खातिर.',
       bh: 'प्रीमियम पहुँच आ समर्थन चाहैत फर्म लेल।',
     }),
-    price: 3999,
+    price: LAWYER_SUBSCRIPTION_PRICES.ELITE,
     period: 'month',
     cta: defineLocalizedText('Contact sales', {
       hi: 'सेल्स से संपर्क करें',

@@ -15,12 +15,14 @@ import {
   Phone,
   Shield,
   Star,
+  User,
   Video,
 } from 'lucide-react';
 
 import LocaleLink from '@/components/LocaleLink';
 import { useLanguage } from '@/lib/LanguageContext';
 import { getBookingCopy } from '@/lib/content/booking';
+import { getMemoryLocalizedText } from '@/lib/content/localized';
 import {
   formatLawyerConsultationCount,
   formatLawyerCurrency,
@@ -28,6 +30,7 @@ import {
   getLawyerModeLabel,
   getLawyerProfileCopy,
 } from '@/lib/content/lawyers';
+import { getLawyerVerificationStatus } from '@/lib/verification';
 
 interface LawyerDetail {
   id: string;
@@ -55,6 +58,7 @@ const MODE_ICON_COMPONENTS: Record<string, React.ComponentType<{ className?: str
   VIDEO: Video,
   CALL: Phone,
   CHAT: MessageSquare,
+  IN_PERSON: User,
 };
 
 export default function LawyerProfileClient({ id }: { id: string }) {
@@ -64,6 +68,15 @@ export default function LawyerProfileClient({ id }: { id: string }) {
   const [error, setError] = useState<string | null>(null);
   const copy = getLawyerProfileCopy(lang);
   const bookingCopy = getBookingCopy(lang);
+  const verificationCopy = {
+    underReview: getMemoryLocalizedText('Under review', lang),
+    notVerified: getMemoryLocalizedText('Not verified', lang),
+    underReviewTitle: getMemoryLocalizedText('Verification under review', lang),
+    underReviewBody: getMemoryLocalizedText(
+      'This lawyer has submitted Bar Council enrolment details. LexIndia will show the verified badge after manual review is completed.',
+      lang
+    ),
+  };
 
   useEffect(() => {
     if (!id) return;
@@ -148,6 +161,22 @@ export default function LawyerProfileClient({ id }: { id: string }) {
   const lawyerDetails = lawyer as LawyerDetail;
   const completedConsultations = lawyerDetails.appointments?.length ?? 0;
   const memberSince = new Date(lawyerDetails.user.createdAt).getFullYear();
+  const verificationStatus = getLawyerVerificationStatus(lawyerDetails);
+  const verificationMeta =
+    verificationStatus === 'VERIFIED'
+      ? {
+          label: t.dashboard.statsVerified,
+          tone: 'text-success',
+        }
+      : verificationStatus === 'UNDER_REVIEW'
+        ? {
+            label: verificationCopy.underReview,
+            tone: 'text-warning',
+          }
+        : {
+            label: verificationCopy.notVerified,
+            tone: 'text-muted-foreground',
+          };
 
   return (
     <div className="min-h-screen bg-muted">
@@ -187,10 +216,16 @@ export default function LawyerProfileClient({ id }: { id: string }) {
                 <div className="flex-1">
                   <div className="mb-1 flex flex-wrap items-center gap-2">
                     <h1 className="text-2xl font-bold text-foreground">{lawyerDetails.user.name}</h1>
-                    {lawyerDetails.isVerified && (
+                    {verificationStatus === 'VERIFIED' && (
                       <span className="flex items-center gap-1 rounded-full border border-success/30 bg-success/10 px-2 py-1 text-xs font-semibold text-success">
                         <CheckCircle className="h-3.5 w-3.5" />
                         {t.dashboard.statsVerified}
+                      </span>
+                    )}
+                    {verificationStatus === 'UNDER_REVIEW' && (
+                      <span className="flex items-center gap-1 rounded-full border border-warning/30 bg-warning/10 px-2 py-1 text-xs font-semibold text-warning">
+                        <Clock className="h-3.5 w-3.5" />
+                        {verificationCopy.underReview}
                       </span>
                     )}
                   </div>
@@ -293,7 +328,7 @@ export default function LawyerProfileClient({ id }: { id: string }) {
               </div>
             </div>
 
-            {lawyerDetails.isVerified && (
+            {verificationStatus === 'VERIFIED' && (
               <div className="rounded-2xl border border-success/30 bg-success/10 p-6">
                 <div className="flex items-start gap-3">
                   <Shield className="mt-0.5 h-5 w-5 shrink-0 text-success" />
@@ -301,6 +336,25 @@ export default function LawyerProfileClient({ id }: { id: string }) {
                     <h3 className="mb-1 font-bold text-success">{copy.verifiedLawyerTitle}</h3>
                     <p className="text-sm leading-relaxed text-success/90">
                       {copy.verifiedLawyerBody}
+                      {lawyerDetails.barCouncilID && (
+                        <span className="mt-1 block">
+                          {copy.barCouncilId}: <strong>{lawyerDetails.barCouncilID}</strong>
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {verificationStatus === 'UNDER_REVIEW' && (
+              <div className="rounded-2xl border border-warning/30 bg-warning/10 p-6">
+                <div className="flex items-start gap-3">
+                  <Clock className="mt-0.5 h-5 w-5 shrink-0 text-warning" />
+                  <div>
+                    <h3 className="mb-1 font-bold text-warning">{verificationCopy.underReviewTitle}</h3>
+                    <p className="text-sm leading-relaxed text-warning/90">
+                      {verificationCopy.underReviewBody}
                       {lawyerDetails.barCouncilID && (
                         <span className="mt-1 block">
                           {copy.barCouncilId}: <strong>{lawyerDetails.barCouncilID}</strong>
@@ -323,19 +377,10 @@ export default function LawyerProfileClient({ id }: { id: string }) {
           <div className="space-y-5">
             <div className="rounded-2xl border border-border bg-background p-6 shadow-sm lg:sticky lg:top-24">
               <div className="mb-5 text-center">
-                {lawyerDetails.consultationFee > 0 ? (
-                  <>
-                    <div className="text-3xl font-bold text-foreground">
-                      {formatLawyerCurrency(lawyerDetails.consultationFee, lang)}
-                    </div>
-                    <div className="text-sm text-muted-foreground">{copy.perConsultation}</div>
-                  </>
-                ) : (
-                  <>
-                    <div className="text-3xl font-bold text-success">{bookingCopy.free}</div>
-                    <div className="text-sm text-muted-foreground">{copy.firstConsultation}</div>
-                  </>
-                )}
+                <div className="text-3xl font-bold text-foreground">
+                  {formatLawyerCurrency(lawyerDetails.consultationFee, lang)}
+                </div>
+                <div className="text-sm text-muted-foreground">{copy.perConsultation}</div>
               </div>
 
               <LocaleLink
@@ -371,13 +416,7 @@ export default function LawyerProfileClient({ id }: { id: string }) {
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">{t.dashboard.statsVerified}</span>
-                  <span
-                    className={`font-semibold ${
-                      lawyerDetails.isVerified ? 'text-success' : 'text-muted-foreground'
-                    }`}
-                  >
-                    {lawyerDetails.isVerified ? t.dashboard.statsVerified : copy.pending}
-                  </span>
+                  <span className={`font-semibold ${verificationMeta.tone}`}>{verificationMeta.label}</span>
                 </div>
               </div>
             </div>

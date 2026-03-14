@@ -1,6 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
-const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? 'http://127.0.0.1:3000';
+const localPort = process.env.PLAYWRIGHT_PORT ?? '3000';
+const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? `http://127.0.0.1:${localPort}`;
 const useRemoteBaseURL = Boolean(process.env.PLAYWRIGHT_BASE_URL);
 
 export default defineConfig({
@@ -15,8 +16,8 @@ export default defineConfig({
   webServer: useRemoteBaseURL
     ? undefined
     : {
-        command: 'node scripts/start-standalone.js',
-        url: 'http://127.0.0.1:3000',
+        command: 'node scripts/start-playwright.js',
+        url: `http://127.0.0.1:${localPort}`,
         reuseExistingServer: !process.env.CI,
         timeout: 120000,
       },

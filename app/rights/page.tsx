@@ -4,10 +4,12 @@ import { ArrowRight, Phone } from 'lucide-react';
 
 import { getLocalizedText } from '@/lib/content/localized';
 import { getRightsCategories, rightsCopy } from '@/lib/content/rights';
+import { getEditorialStatusLabel, normalizeEditorialStatus } from '@/lib/editorial-review';
 import { createLocalizedMetadata } from '@/lib/i18n/metadata';
 import { getMessages } from '@/lib/i18n/messages';
 import { withLocalePrefix } from '@/lib/i18n/navigation';
 import { getRequestLocale } from '@/lib/i18n/request';
+import prisma from '@/lib/prisma';
 
 const emergencyNumbers = ['100', '1091', '15100', '1930', '14567'];
 
@@ -27,7 +29,45 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function RightsPage() {
   const locale = await getRequestLocale();
   const messages = getMessages(locale);
-  const categories = getRightsCategories(locale);
+  const rightEntries = await prisma.rightEntry.findMany({
+    where: {
+      editorialStatus: {
+        not: 'ARCHIVED',
+      },
+    },
+    select: {
+      slug: true,
+      editorialStatus: true,
+    },
+  });
+  const rightEntryMap = new Map(rightEntries.map((entry) => [entry.slug, entry]));
+  const categories = getRightsCategories(locale).filter((category) => {
+    const entry = rightEntryMap.get(category.slug);
+    return !entry || normalizeEditorialStatus(entry.editorialStatus) !== 'ARCHIVED';
+  });
+
+  const getRightStatusStyles = (status: string | undefined) => {
+    const normalizedStatus = normalizeEditorialStatus(status, 'APPROVED');
+
+    if (normalizedStatus === 'APPROVED') {
+      return {
+        label: 'Reviewed',
+        className: 'border-success/30 bg-success/10 text-success',
+      };
+    }
+
+    if (normalizedStatus === 'REVIEW') {
+      return {
+        label: getEditorialStatusLabel(normalizedStatus),
+        className: 'border-warning/30 bg-warning/10 text-warning',
+      };
+    }
+
+    return {
+      label: getEditorialStatusLabel(normalizedStatus),
+      className: 'border-border bg-surface text-muted-foreground',
+    };
+  };
 
   return (
     <div className="min-h-screen bg-muted">
@@ -64,6 +104,7 @@ export default async function RightsPage() {
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {categories.map((category) => {
             const Icon = category.icon;
+            const status = getRightStatusStyles(rightEntryMap.get(category.slug)?.editorialStatus);
 
             return (
               <Link
@@ -71,8 +112,13 @@ export default async function RightsPage() {
                 href={withLocalePrefix(`/rights/${category.slug}`, locale)}
                 className="group rounded-2xl border border-border bg-background p-6 shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md"
               >
-                <div className={`mb-4 flex h-12 w-12 items-center justify-center rounded-xl ${category.surfaceClassName}`}>
-                  <Icon className={`h-6 w-6 ${category.accentClassName}`} />
+                <div className="mb-4 flex items-start justify-between gap-3">
+                  <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${category.surfaceClassName}`}>
+                    <Icon className={`h-6 w-6 ${category.accentClassName}`} />
+                  </div>
+                  <span className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${status.className}`}>
+                    {status.label}
+                  </span>
                 </div>
                 <h2 className="mb-2 text-lg font-semibold text-foreground">{category.title}</h2>
                 <p className="mb-4 text-sm text-muted-foreground">
@@ -87,11 +133,20 @@ export default async function RightsPage() {
           })}
         </div>
 
-        <div className="mt-12 grid grid-cols-1 gap-5 md:grid-cols-2">
+        <div className="mt-12 grid grid-cols-1 gap-5 md:grid-cols-3">
           <div className="rounded-2xl border border-border bg-background p-6 shadow-sm">
             <h3 className="mb-2 text-lg font-bold text-foreground">{messages.nav.knowledge}</h3>
             <p className="mb-4 text-sm text-muted-foreground">{messages.knowledge.subtitle}</p>
             <Link href={withLocalePrefix('/knowledge', locale)} className="text-sm font-semibold text-primary hover:underline">
+              {messages.common.viewDetails}
+            </Link>
+          </div>
+          <div className="rounded-2xl border border-border bg-background p-6 shadow-sm">
+            <h3 className="mb-2 text-lg font-bold text-foreground">Indian laws</h3>
+            <p className="mb-4 text-sm text-muted-foreground">
+              Browse reviewed act summaries and section explainers before you escalate your matter.
+            </p>
+            <Link href={withLocalePrefix('/laws', locale)} className="text-sm font-semibold text-primary hover:underline">
               {messages.common.viewDetails}
             </Link>
           </div>

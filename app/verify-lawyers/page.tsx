@@ -19,9 +19,9 @@ import { withLocalePrefix } from '@/lib/i18n/navigation';
 import { getRequestLocale } from '@/lib/i18n/request';
 
 const VERIFY_LAWYERS_PAGE = {
-  heroTitle: 'How We Verify Lawyers',
+  heroTitle: 'How LexIndia Reviews Lawyer Verification',
   heroDescription:
-    'Every lawyer on LexIndia goes through a rigorous 5-step verification process before receiving the Verified badge.',
+    'Lawyers submit verification details to LexIndia for manual review before the Verified badge is shown.',
   heroBadgeLabel: 'Verified',
   heroDescriptionSuffix: 'Here is exactly what we check and what we do not.',
   heroSupport: 'We believe in transparency. If you have questions about a specific lawyer, use our',
@@ -29,9 +29,9 @@ const VERIFY_LAWYERS_PAGE = {
   heroSupportEnd: 'to reach our trust team.',
   importantLabel: 'Important:',
   importantText:
-    "Verification confirms a lawyer's identity and Bar Council enrolment. It does not guarantee outcomes, quality of advice, or specialization depth. Always review a lawyer's profile, ratings, and experience before booking.",
-  stepsTitle: 'Our 5-Step Verification Process',
-  stepsSubtitle: 'Applied to every lawyer before they can list on LexIndia.',
+    "Verification confirms that LexIndia reviewed the lawyer's submitted identity and Bar Council enrolment details. It does not guarantee outcomes, quality of advice, or specialization depth. Always review a lawyer's profile, ratings, and experience before booking.",
+  stepsTitle: 'Our Verification Workflow',
+  stepsSubtitle: 'This is the review process used for verification submissions on LexIndia.',
   stepLabelPrefix: 'STEP',
   verifiedTitle: 'Verified Means',
   notVerifiedTitle: 'Not Verified Means',
@@ -48,8 +48,8 @@ const VERIFICATION_STEPS = [
   {
     number: '01',
     icon: FileCheck,
-    title: 'Document Submission',
-    desc: 'Every lawyer who applies to join LexIndia must submit their Bar Council Enrolment Certificate, Aadhaar card (for identity), and a professional photograph.',
+    title: 'Lawyer submission',
+    desc: 'A lawyer submits their Bar Council enrolment ID, identity document link, and enrolment certificate link for review.',
     color: 'bg-primary/10 border-primary/30',
     iconColor: 'text-primary',
     iconBg: 'bg-primary/20',
@@ -57,8 +57,8 @@ const VERIFICATION_STEPS = [
   {
     number: '02',
     icon: Search,
-    title: 'Bar Council Cross-Check',
-    desc: 'Our team cross-references the submitted Bar Council Enrolment Number with the respective State Bar Council registry to verify active enrolment status.',
+    title: 'Manual review',
+    desc: 'The LexIndia trust team reviews the submitted Bar Council details and supporting documents before making a decision.',
     color: 'bg-surface border-border',
     iconColor: 'text-primary',
     iconBg: 'bg-muted',
@@ -66,29 +66,20 @@ const VERIFICATION_STEPS = [
   {
     number: '03',
     icon: ShieldCheck,
-    title: 'Manual Document Review',
-    desc: 'A LexIndia team member physically reviews submitted documents for authenticity. We check for tampered certificates, mismatched IDs, and false claims.',
+    title: 'Decision logged',
+    desc: 'If the review passes, the profile gets the Verified badge. If details are incomplete or mismatched, LexIndia can request changes or reject the submission.',
     color: 'bg-accent/10 border-accent/30',
     iconColor: 'text-accent',
     iconBg: 'bg-accent/20',
   },
   {
     number: '04',
-    icon: Star,
-    title: 'Verification Badge Issued',
-    desc: 'Lawyers who pass all checks receive a Verified badge on their profile. Unverified applicants are notified and given a chance to resubmit correct documents.',
+    icon: AlertTriangle,
+    title: 'Re-review when needed',
+    desc: 'If a lawyer updates enrolment details or a trust concern is reported, the profile can return to manual review and the badge can be removed pending checks.',
     color: 'bg-warning/10 border-warning/30',
     iconColor: 'text-warning',
     iconBg: 'bg-warning/20',
-  },
-  {
-    number: '05',
-    icon: AlertTriangle,
-    title: 'Ongoing Monitoring',
-    desc: 'Verification is not a one-time event. Client ratings, reviews, and complaints are monitored. Any credible complaint triggers an automatic re-review and potential suspension.',
-    color: 'bg-danger/10 border-danger/30',
-    iconColor: 'text-danger',
-    iconBg: 'bg-danger/20',
   },
 ] as const;
 
@@ -96,14 +87,14 @@ const VERIFIED_INDICATORS = [
   'Verified badge on profile',
   'Bar Council ID visible on profile',
   'At least one consultation mode listed',
-  'Profile reviewed by LexIndia team',
+  'Latest verification review approved by LexIndia',
 ] as const;
 
 const NOT_VERIFIED_INDICATORS = [
   'No verification badge shown',
   'Newly onboarded (review pending)',
-  'Profile flagged for document mismatch',
-  'Active investigation for a complaint',
+  'Changes requested on the latest submission',
+  'Latest review not approved yet',
 ] as const;
 
 const USER_RIGHTS = [
@@ -130,7 +121,7 @@ const FAQS = [
   },
   {
     q: 'How long does verification take?',
-    a: 'Typically 2-5 business days after a lawyer submits all required documents. During high-demand periods this may extend to 7 days.',
+    a: 'Review time depends on queue volume and document clarity. In most cases, LexIndia aims to review submissions within a few business days.',
   },
   {
     q: 'Is my data safe when booking through LexIndia?',
@@ -144,9 +135,9 @@ export async function generateMetadata(): Promise<Metadata> {
   return createLocalizedMetadata({
     locale,
     pathname: '/verify-lawyers',
-    title: `${getMemoryLocalizedText('How We Verify Lawyers', locale)} | LexIndia`,
+    title: `${getMemoryLocalizedText('How LexIndia Reviews Lawyer Verification', locale)} | LexIndia`,
     description: getMemoryLocalizedText(
-      'Learn how LexIndia verifies every lawyer on our platform from Bar Council ID checks to identity verification and ongoing monitoring.',
+      'Learn how LexIndia reviews lawyer verification submissions, checks submitted Bar Council details, and updates badge status after manual review.',
       locale
     ),
     keywords: [

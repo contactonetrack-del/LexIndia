@@ -14,20 +14,88 @@ import {
 } from 'lucide-react';
 
 import { LeadCapture } from '@/components/ui/LeadCapture';
+import { GUIDE_CATEGORY_REGISTRY } from '@/lib/content/guides-registry';
 import { getMemoryLocalizedText, localizeTreeFromMemory } from '@/lib/content/localized';
+import { getEditorialStatusLabel, normalizeEditorialStatus } from '@/lib/editorial-review';
 import { createLocalizedMetadata } from '@/lib/i18n/metadata';
 import { withLocalePrefix } from '@/lib/i18n/navigation';
 import { getRequestLocale } from '@/lib/i18n/request';
+import prisma from '@/lib/prisma';
 
-type GuideCategory = {
+type GuideCategoryDecoration = {
   icon: LucideIcon;
-  title: string;
-  slug: string;
   toneClass: string;
   iconClass: string;
   iconBgClass: string;
-  guides: Array<{ title: string; slug: string; readTime: number }>;
 };
+
+const GUIDE_CATEGORY_DECORATIONS: Record<string, GuideCategoryDecoration> = {
+  'emergency-law': {
+    icon: Shield,
+    toneClass: 'border-warning/30 bg-warning/10',
+    iconClass: 'text-warning',
+    iconBgClass: 'bg-warning/20',
+  },
+  'criminal-law': {
+    icon: Scale,
+    toneClass: 'border-danger/30 bg-danger/10',
+    iconClass: 'text-danger',
+    iconBgClass: 'bg-danger/20',
+  },
+  'family-law': {
+    icon: Users,
+    toneClass: 'border-accent/30 bg-accent/10',
+    iconClass: 'text-accent',
+    iconBgClass: 'bg-accent/20',
+  },
+  'property-law': {
+    icon: Home,
+    toneClass: 'border-primary/30 bg-primary/10',
+    iconClass: 'text-primary',
+    iconBgClass: 'bg-primary/15',
+  },
+  'consumer-law': {
+    icon: ShoppingCart,
+    toneClass: 'border-success/30 bg-success/10',
+    iconClass: 'text-success',
+    iconBgClass: 'bg-success/20',
+  },
+  'labour-law': {
+    icon: Briefcase,
+    toneClass: 'border-warning/30 bg-warning/10',
+    iconClass: 'text-warning',
+    iconBgClass: 'bg-warning/20',
+  },
+  'civil-law': {
+    icon: FileText,
+    toneClass: 'border-accent/30 bg-accent/10',
+    iconClass: 'text-accent',
+    iconBgClass: 'bg-accent/20',
+  },
+};
+
+function getGuideStatusStyles(status: string, hasPublishedContent: boolean) {
+  const normalizedStatus = normalizeEditorialStatus(status, hasPublishedContent ? 'APPROVED' : 'DRAFT');
+
+  if (normalizedStatus === 'APPROVED' && hasPublishedContent) {
+    return {
+      label: 'Reviewed',
+      className: 'border-success/30 bg-success/10 text-success',
+    };
+  }
+
+  if (normalizedStatus === 'REVIEW') {
+    return {
+      label: getEditorialStatusLabel(normalizedStatus),
+      className: 'border-warning/30 bg-warning/10 text-warning',
+    };
+  }
+
+  return {
+    label: hasPublishedContent ? getEditorialStatusLabel(normalizedStatus) : 'Topic in progress',
+    className: 'border-border bg-surface text-muted-foreground',
+  };
+}
 
 export async function generateMetadata(): Promise<Metadata> {
   const locale = await getRequestLocale();
@@ -36,121 +104,44 @@ export async function generateMetadata(): Promise<Metadata> {
     pathname: '/guides',
     title: `${getMemoryLocalizedText('Understand Indian law simply', locale)} | LexIndia`,
     description: getMemoryLocalizedText(
-      'plain-language legal guides covering major areas of Indian law. No jargon. Reviewed by legal professionals.',
+      'Plain-language legal guides for India. Reviewed guides are clearly marked, and in-progress topics are labelled before publication.',
       locale
     ),
   });
 }
 
-const GUIDE_CATEGORIES: GuideCategory[] = [
-  {
-    icon: Shield,
-    title: 'Emergency and Accidents',
-    slug: 'emergency-law',
-    toneClass: 'border-warning/30 bg-warning/10',
-    iconClass: 'text-warning',
-    iconBgClass: 'bg-warning/20',
-    guides: [{ title: 'Road Accidents: Immediate Legal Steps and What Not to Do', slug: 'road-accident-emergency', readTime: 7 }],
-  },
-  {
-    icon: Scale,
-    title: 'Criminal Law',
-    slug: 'criminal-law',
-    toneClass: 'border-danger/30 bg-danger/10',
-    iconClass: 'text-danger',
-    iconBgClass: 'bg-danger/20',
-    guides: [
-      { title: 'What to Do When Arrested by Police in India', slug: 'arrested-by-police', readTime: 8 },
-      { title: 'How to File an FIR: Step-by-Step Guide', slug: 'how-to-file-fir', readTime: 6 },
-      { title: 'Understanding Bail: Types and How to Get Bail', slug: 'understanding-bail', readTime: 7 },
-      { title: 'Anticipatory Bail: When and How to Apply', slug: 'anticipatory-bail', readTime: 6 },
-      { title: 'Free Legal Aid Under NALSA: Who Qualifies', slug: 'free-legal-aid-nalsa', readTime: 5 },
-    ],
-  },
-  {
-    icon: Users,
-    title: 'Family Law',
-    slug: 'family-law',
-    toneClass: 'border-accent/30 bg-accent/10',
-    iconClass: 'text-accent',
-    iconBgClass: 'bg-accent/20',
-    guides: [
-      { title: 'Divorce in India: Mutual Consent vs Contested', slug: 'divorce-india-guide', readTime: 10 },
-      { title: 'Child Custody Laws in India Explained', slug: 'child-custody-india', readTime: 8 },
-      { title: 'Maintenance and Alimony: Your Rights After Divorce', slug: 'maintenance-alimony-rights', readTime: 7 },
-      { title: 'Marriage Registration in India: How to Register', slug: 'marriage-registration-india', readTime: 5 },
-      { title: 'Domestic Violence Act 2005: A Complete Guide', slug: 'domestic-violence-act-guide', readTime: 9 },
-    ],
-  },
-  {
-    icon: Home,
-    title: 'Property Law',
-    slug: 'property-law',
-    toneClass: 'border-primary/30 bg-primary/10',
-    iconClass: 'text-primary',
-    iconBgClass: 'bg-primary/15',
-    guides: [
-      { title: 'Tenant Rights in India: What Your Landlord Cannot Do', slug: 'tenant-rights-india', readTime: 8 },
-      { title: 'Property Registration: Process and Documents Needed', slug: 'property-registration-guide', readTime: 7 },
-      { title: 'How to Dispute an Illegal Eviction', slug: 'illegal-eviction-dispute', readTime: 6 },
-      { title: 'Property Inheritance Laws in India', slug: 'property-inheritance-india', readTime: 9 },
-      { title: 'RERA: Your Rights as a Home Buyer', slug: 'rera-home-buyer-rights', readTime: 7 },
-    ],
-  },
-  {
-    icon: ShoppingCart,
-    title: 'Consumer Law',
-    slug: 'consumer-law',
-    toneClass: 'border-success/30 bg-success/10',
-    iconClass: 'text-success',
-    iconBgClass: 'bg-success/20',
-    guides: [
-      { title: 'How to File a Consumer Court Complaint in India', slug: 'file-consumer-complaint', readTime: 7 },
-      { title: 'E-Commerce Fraud: Getting a Refund From Flipkart or Amazon', slug: 'ecommerce-refund-fraud', readTime: 6 },
-      { title: 'Insurance Claim Rejection: How to Contest It', slug: 'insurance-claim-rejection', readTime: 7 },
-      { title: 'Defective Product Claims Under Consumer Protection Act', slug: 'defective-product-claim', readTime: 6 },
-    ],
-  },
-  {
-    icon: Briefcase,
-    title: 'Labour and Employment',
-    slug: 'labour-law',
-    toneClass: 'border-warning/30 bg-warning/10',
-    iconClass: 'text-warning',
-    iconBgClass: 'bg-warning/20',
-    guides: [
-      { title: 'Wrongful Termination in India: Your Options', slug: 'wrongful-termination-india', readTime: 8 },
-      { title: 'PF (Provident Fund): How to Withdraw and Claim', slug: 'pf-withdrawal-claim-guide', readTime: 6 },
-      { title: 'Gratuity: Who Gets It and How to Claim', slug: 'gratuity-claim-guide', readTime: 5 },
-      { title: 'POSH Act: Filing a Sexual Harassment Complaint at Work', slug: 'posh-act-complaint-guide', readTime: 8 },
-    ],
-  },
-  {
-    icon: FileText,
-    title: 'Civil and General',
-    slug: 'civil-law',
-    toneClass: 'border-accent/30 bg-accent/10',
-    iconClass: 'text-accent',
-    iconBgClass: 'bg-accent/20',
-    guides: [
-      { title: 'How to File an RTI (Right to Information) Application', slug: 'how-to-file-rti', readTime: 6 },
-      { title: 'Cybercrime Reporting in India: Step-by-Step', slug: 'cybercrime-reporting-india', readTime: 7 },
-      { title: 'How to Write a Legal Notice', slug: 'how-to-write-legal-notice', readTime: 5 },
-    ],
-  },
-];
-
 export default async function GuidesPage() {
   const locale = await getRequestLocale();
-  const totalGuides = GUIDE_CATEGORIES.reduce((sum, category) => sum + category.guides.length, 0);
+  const totalGuides = GUIDE_CATEGORY_REGISTRY.reduce((sum, category) => sum + category.guides.length, 0);
+  const guideEntries = await prisma.guideEntry.findMany({
+    where: {
+      editorialStatus: {
+        not: 'ARCHIVED',
+      },
+    },
+    select: {
+      slug: true,
+      editorialStatus: true,
+      hasPublishedContent: true,
+    },
+  });
+  const guideEntryMap = new Map<
+    string,
+    { slug: string; editorialStatus: string; hasPublishedContent: boolean }
+  >(guideEntries.map((entry) => [entry.slug, entry]));
+  const reviewedGuideCount = guideEntries.filter(
+    (entry) => entry.editorialStatus === 'APPROVED' && entry.hasPublishedContent
+  ).length;
+
   const copy = localizeTreeFromMemory({
-    badge: 'Free legal guides',
+    badge: 'Legal guide library',
     title: 'Understand Indian law simply',
     subtitle:
-      'plain-language legal guides covering major areas of Indian law. No jargon. Reviewed by legal professionals.',
+      'Approved guides are reviewed by legal professionals. Topics still being drafted are clearly labelled before publication.',
+    statLabel: 'reviewed guides live',
     infoLabel: 'Informational only',
     infoBody:
-      'These guides explain general Indian law and are not legal advice. Consult a verified lawyer for your specific situation.',
+      'These guides explain general Indian law and are not legal advice. Use the review badges to distinguish approved guides from in-progress topics.',
     guidesLabel: 'guides',
     readLabel: 'min read',
     ctaTitle: 'Need help with your specific case?',
@@ -158,9 +149,13 @@ export default async function GuidesPage() {
       'Reading a guide is the first step. Get personalised advice from a verified Indian lawyer.',
     ctaAction: 'Find a verified lawyer',
   } as const, locale);
-  const localizedCategories = localizeTreeFromMemory(GUIDE_CATEGORIES, locale, {
-    skipKeys: ['icon', 'slug', 'toneClass', 'iconClass', 'iconBgClass', 'readTime'],
-  });
+
+  const localizedCategories = localizeTreeFromMemory(GUIDE_CATEGORY_REGISTRY, locale, {
+    skipKeys: ['slug', 'readTime'],
+  }).map((category) => ({
+    ...category,
+    ...(GUIDE_CATEGORY_DECORATIONS[category.slug] ?? GUIDE_CATEGORY_DECORATIONS['civil-law']),
+  }));
 
   return (
     <div className="min-h-screen bg-muted">
@@ -171,9 +166,13 @@ export default async function GuidesPage() {
             <span className="text-sm font-semibold uppercase tracking-wider text-accent-foreground">{copy.badge}</span>
           </div>
           <h1 className="mb-4 text-3xl font-bold sm:text-4xl">{copy.title}</h1>
-          <p className="mb-6 max-w-2xl text-lg text-primary-foreground/85">
-            {totalGuides}+ {copy.subtitle}
-          </p>
+          <p className="mb-6 max-w-2xl text-lg text-primary-foreground/85">{copy.subtitle}</p>
+          <div className="inline-flex items-center gap-2 rounded-full bg-primary-foreground/10 px-4 py-2 text-sm text-primary-foreground">
+            <span className="font-semibold">{reviewedGuideCount}</span>
+            <span>
+              / {totalGuides} {copy.statLabel}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -205,23 +204,36 @@ export default async function GuidesPage() {
                 </div>
 
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {category.guides.map((guide) => (
-                    <Link
-                      key={guide.slug}
-                      href={withLocalePrefix(`/guides/${guide.slug}`, locale)}
-                      className={`group rounded-xl border-2 bg-background p-5 transition-all hover:shadow-md ${category.toneClass}`}
-                    >
-                      <h3 className="mb-3 text-sm font-semibold leading-snug text-foreground transition-colors group-hover:text-primary">
-                        {guide.title}
-                      </h3>
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-muted-foreground">
-                          {guide.readTime} {copy.readLabel}
-                        </span>
-                        <ArrowRight className="h-4 w-4 text-muted-foreground transition-all group-hover:translate-x-0.5 group-hover:text-primary" />
-                      </div>
-                    </Link>
-                  ))}
+                  {category.guides.map((guide) => {
+                    const guideEntry = guideEntryMap.get(guide.slug);
+                    const guideStatus = getGuideStatusStyles(
+                      guideEntry?.editorialStatus ?? 'DRAFT',
+                      guideEntry?.hasPublishedContent ?? false
+                    );
+
+                    return (
+                      <Link
+                        key={guide.slug}
+                        href={withLocalePrefix(`/guides/${guide.slug}`, locale)}
+                        className={`group rounded-xl border-2 bg-background p-5 transition-all hover:shadow-md ${category.toneClass}`}
+                      >
+                        <div className="mb-3 flex items-start justify-between gap-3">
+                          <h3 className="text-sm font-semibold leading-snug text-foreground transition-colors group-hover:text-primary">
+                            {guide.title}
+                          </h3>
+                          <span className={`shrink-0 rounded-full border px-2.5 py-1 text-[11px] font-semibold ${guideStatus.className}`}>
+                            {guideStatus.label}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-muted-foreground">
+                            {guide.readTime} {copy.readLabel}
+                          </span>
+                          <ArrowRight className="h-4 w-4 text-muted-foreground transition-all group-hover:translate-x-0.5 group-hover:text-primary" />
+                        </div>
+                      </Link>
+                    );
+                  })}
                 </div>
               </div>
             );

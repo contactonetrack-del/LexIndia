@@ -34,6 +34,34 @@ export default async function LawyerDashboard() {
       specializations: { include: { translations: true } },
       languages: { include: { translations: true } },
       modes: true,
+      availabilityExceptions: {
+        select: { id: true, dateKey: true },
+        orderBy: [{ dateKey: 'asc' }],
+      },
+      availabilitySlotOverrides: {
+        select: { id: true, dateKey: true, time: true, action: true },
+        orderBy: [{ dateKey: 'asc' }, { time: 'asc' }],
+      },
+      availabilitySlots: {
+        select: { id: true, weekday: true, time: true },
+        orderBy: [{ weekday: 'asc' }, { time: 'asc' }],
+      },
+      verificationCases: {
+        select: {
+          id: true,
+          status: true,
+          submittedBarCouncilId: true,
+          identityDocumentUrl: true,
+          enrollmentCertificateUrl: true,
+          practiceCertificateUrl: true,
+          lawyerNotes: true,
+          adminNotes: true,
+          submittedAt: true,
+          reviewedAt: true,
+        },
+        orderBy: { submittedAt: 'desc' },
+        take: 1,
+      },
     },
   });
 

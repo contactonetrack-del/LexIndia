@@ -2,12 +2,12 @@ import type { Metadata } from 'next';
 
 import {
   DEFAULT_LOCALE,
-  SITE_URL,
   SUPPORTED_LOCALES,
   getLocaleOpenGraph,
   type Locale,
 } from '@/lib/i18n/config';
 import { withLocalePrefix } from '@/lib/i18n/navigation';
+import { SITE_URL } from '@/lib/site';
 
 function absoluteUrl(pathname: string): string {
   return new URL(pathname, SITE_URL).toString();

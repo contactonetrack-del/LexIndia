@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
+import {
+  getIndiaDateKey,
+  getIndiaTimeKey,
+  getIndiaWeekday,
+} from '@/lib/availability';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { sendBookingEmails } from '@/lib/email';
 import Razorpay from 'razorpay';
 import { getApiLocale, getApiLocalizedText } from '@/lib/i18n/api';
 import { localizeNamedEntity } from '@/lib/i18n/db';
+import { isLawyerConsultationMode } from '@/lib/lawyer-consultation';
 
 // ============================================================
 // POST /api/appointments  — create a new appointment
@@ -34,9 +40,10 @@ export async function POST(req: NextRequest) {
   if (typeof date !== 'string' || !date.trim()) {
     return NextResponse.json({ error: getApiLocalizedText(req, 'date is required.') }, { status: 400 });
   }
-  if (typeof mode !== 'string' || !['VIDEO', 'CALL', 'CHAT'].includes(mode.toUpperCase())) {
+  const normalizedMode = typeof mode === 'string' ? mode.toUpperCase() : '';
+  if (!isLawyerConsultationMode(normalizedMode)) {
     return NextResponse.json(
-      { error: getApiLocalizedText(req, 'mode must be VIDEO, CALL, or CHAT.') },
+      { error: getApiLocalizedText(req, 'mode must be VIDEO, CALL, CHAT, or IN_PERSON.') },
       { status: 400 }
     );
   }
@@ -49,10 +56,81 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  const appointmentDateKey = getIndiaDateKey(appointmentDate);
+  const appointmentWeekday = getIndiaWeekday(appointmentDateKey);
+  const appointmentTimeKey = getIndiaTimeKey(appointmentDate);
+
   // Verify lawyer exists
-  const lawyer = await prisma.lawyerProfile.findUnique({ where: { id: lawyerId } });
+  const lawyer = await prisma.lawyerProfile.findUnique({
+    where: { id: lawyerId },
+    include: {
+      modes: { select: { mode: true } },
+      availabilityExceptions: {
+        where: {
+          dateKey: appointmentDateKey,
+        },
+        select: { id: true },
+        take: 1,
+      },
+      availabilitySlotOverrides: {
+        where: {
+          dateKey: appointmentDateKey,
+          time: appointmentTimeKey,
+        },
+        select: { action: true },
+      },
+      availabilitySlots: {
+        where: {
+          weekday: appointmentWeekday,
+          time: appointmentTimeKey,
+        },
+        select: { id: true },
+      },
+    },
+  });
   if (!lawyer) {
     return NextResponse.json({ error: getApiLocalizedText(req, 'Lawyer not found.') }, { status: 404 });
+  }
+
+  if (!lawyer.modes.some((entry) => entry.mode === normalizedMode)) {
+    return NextResponse.json(
+      {
+        error: getApiLocalizedText(
+          req,
+          'This lawyer does not currently offer the selected consultation mode.'
+        ),
+      },
+      { status: 400 }
+    );
+  }
+  if (lawyer.availabilityExceptions.length > 0) {
+    return NextResponse.json(
+      {
+        error: getApiLocalizedText(
+          req,
+          'This lawyer has blocked bookings for the selected date.'
+        ),
+      },
+      { status: 400 }
+    );
+  }
+  const hasOpenSlotOverride = lawyer.availabilitySlotOverrides.some(
+    (entry) => entry.action === 'OPEN_SLOT'
+  );
+  const hasBlockedSlotOverride = lawyer.availabilitySlotOverrides.some(
+    (entry) => entry.action === 'BLOCK_SLOT'
+  );
+
+  if (hasBlockedSlotOverride || (!hasOpenSlotOverride && lawyer.availabilitySlots.length === 0)) {
+    return NextResponse.json(
+      {
+        error: getApiLocalizedText(
+          req,
+          'This lawyer is not available at the selected date and time.'
+        ),
+      },
+      { status: 400 }
+    );
   }
 
   // Prevent double-booking same time slot for same lawyer
@@ -105,7 +183,7 @@ export async function POST(req: NextRequest) {
         citizenId: session.user.id,
         lawyerId: lawyerId as string,
         date: appointmentDate,
-        mode: mode.toUpperCase(),
+        mode: normalizedMode,
         notes: typeof notes === 'string' ? notes.slice(0, 2000) : null,
         status: 'PENDING',
         amount: consultationFee,
@@ -132,7 +210,7 @@ export async function POST(req: NextRequest) {
         lawyerEmail,
         lawyerName,
         date: appointmentDate.toISOString(),
-        mode: mode.toUpperCase(),
+        mode: normalizedMode,
         notes: typeof notes === 'string' ? notes.slice(0, 2000) : null,
         appointmentId: appointment.id,
       }).catch((err) => console.error('[email] Non-blocking email failure:', err));
